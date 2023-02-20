@@ -1,8 +1,8 @@
 library(tidyverse)
 
 # read files
-etf_file <- "etfs.csv"
-stock_file <- "stocks.csv"
+etf_file <- "data/etfs.csv"
+stock_file <- "data/stocks.csv"
 etfs <- readr::read_csv(etf_file)
 stocks <- readr::read_csv(stock_file) 
 
