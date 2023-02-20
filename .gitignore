@@ -38,3 +38,8 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 .DS_Store
+
+# Data files
+etf_screener.R
+etfs.csv
+stocks.csv
