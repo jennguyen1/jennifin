@@ -1,4 +1,4 @@
-# jennyfin
+# jennifin
 
 ## Check it Out!
 
