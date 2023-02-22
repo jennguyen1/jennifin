@@ -44,3 +44,4 @@ vignettes/*.pdf
 etf_screener.R
 etfs.csv
 stocks.csv
+read_time.txt
