@@ -1,4 +1,4 @@
-# Server Code for Calculator
+# Server Code
 # Date: Feb 2023
 # Author: Jenny Nguyen
 # Email: jnnguyen2@wisc.edu

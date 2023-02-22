@@ -1,4 +1,4 @@
-# UI Code for Calculator
+# UI Code
 # Date: Feb 2023
 # Author: Jenny Nguyen
 # Email: jnnguyen2@wisc.edu
@@ -27,7 +27,7 @@ sidebar <- dashboardSidebar(
     menuItem("Major Markets", tabName = "main", icon = icon("house")),
     menuItem("Screen ETFs", tabName = "etfs", icon = icon("layer-group")),
     menuItem("Screen Stocks", tabName = "stocks", icon = icon("chart-line")),
-    menuItem("Github Source Code", href = "https://github.com/jennguyen1", icon = icon("github"))
+    menuItem("Github Source Code", href = "https://github.com/jennguyen1/jennifin", icon = icon("github"))
   ),
   div(
     p("Copyright (c) 2023 Jennifer N Nguyen under the MIT License"),
@@ -110,11 +110,8 @@ function(request){
     header,
     sidebar, 
     dashboardBody(
-      tags$head(tags$style(HTML( # css lock navbar
-        '.navbar-custom-menu {
-          pointer-events: none;
-        }'
-      ))),
+      includeCSS("www/custom.css"),
+      
       tabItems(
         main,
         etfs,

@@ -1,0 +1,9 @@
+
+
+/* notification info */
+.navbar-custom-menu > .navbar-nav > li > .dropdown-menu {
+  display: none;
+}
+.navbar-custom-menu > .navbar-nav {
+  pointer-events: none;
+}
