@@ -77,17 +77,39 @@ create_display_row <- function(get_ticker, etfs, stocks){
     calculate_perc_above_200d()
   
   # % components above
-  what_size <- switch(
-    get_ticker, 
-    "SPY" = "LRG",
-    "IJH" = "MID",
-    "IWM" = "SML", 
-    NA
-  )
-  p_components <- stocks %>% 
-    dplyr::filter(size == what_size) %>% 
-    calculate_perc_above_200d()
-  
+  if( !stringr::str_detect(get_ticker, "^X") ){
+    what_size <- switch(
+      get_ticker, 
+      "SPY" = "LRG",
+      "RSP" = "LRG", 
+      "IJH" = "MID",
+      "IWM" = "SML", 
+      NA
+    )
+    p_components <- stocks %>% 
+      dplyr::filter(size == what_size) %>% 
+      calculate_perc_above_200d()
+  } else{
+    what_s_sector <- switch(
+      get_ticker, 
+      "XLB" = "Materials",
+      "XLE" = "Energy",
+      "XLF" = "Financials",
+      "XLI" = "Industrials",
+      "XLC" = "Communication Services",
+      "XLK" = "Information Technology",
+      "XLY" = "Consumer Discretionary",
+      "XLRE" = "Real Estate",
+      "XLP" = "Consumer Staples",
+      "XLU" = "Utilities",
+      "XLV" = "Health Care",
+      NA
+    )
+    p_components <- stocks %>% 
+      dplyr::filter(sector == what_s_sector) %>% 
+      calculate_perc_above_200d()
+  }
+
   # add to performance table
   etfs %>% 
     dplyr::filter(ticker == get_ticker) %>% 
@@ -260,7 +282,13 @@ tabulate_performance_stocks <- function(dat, sub = NULL){
 
 display_table_summary <- function(etfs, stocks){
   
-  tab_data <- purrr::map_dfr(c("SPY", "RSP", "IJH", "IWM"), create_display_row, etfs, stocks)
+  tab_data <- purrr::map_dfr(
+    c("SPY", "RSP", "IJH", "IWM", "XLB", "XLE", "XLF", "XLI", "XLC", "XLK", "XLY", "XLRE", "XLP", "XLU", "XLV"), 
+    create_display_row, etfs, stocks
+  ) %>% 
+    dplyr::mutate(rank = c(1:4, rep(5, 11))) %>% 
+    dplyr::arrange(rank, dplyr::desc(return_200d)) %>% 
+    dplyr::select(-rank)
   
   DT::datatable(
     tab_data,
@@ -285,8 +313,8 @@ display_table_summary <- function(etfs, stocks){
     options = list(
       dom = 'tr', # table display
       columnDefs = list(list(className = 'dt-center', targets = 0:12)),
-      pageLength = 4,
-      scrollX = TRUE
+      pageLength = 15,
+      scrollX = TRUE, scrollY = 400
     )
   ) %>% 
     # formatting
