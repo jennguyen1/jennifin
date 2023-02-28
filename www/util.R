@@ -34,13 +34,12 @@ clean_data_etfs <- function(dat){
       return_1m = pdiff(price, price_1m),
       return_3m = pdiff(price, price_3m),
       return_6m = pdiff(price, price_6m),
-      return_200d = pdiff(price, price_200d),
       return_1y = pdiff(price, price_12m),
       return_ytd = pdiff(price, price_year_start),
-      return_prev_ytd = pdiff(price, price_prior_year_start),
+      return_200d = pdiff(price, price_200d),
       above_52w_low = pdiff(price, price_52w_lo),
-      below_52w_high = pdiff(price, price_52w_hi),
-      rsi14 = purrr::map_dbl(ticker, calc_rsi_14)
+      below_52w_high = pdiff(price, price_52w_hi)
+      # rsi14 = purrr::map_dbl(ticker, calc_rsi_14) # dont need this
     ) %>% 
     dplyr::select(-starts_with("price"))
 }
@@ -48,6 +47,8 @@ clean_data_etfs <- function(dat){
 clean_data_stocks <- function(dat){
   dat %>% 
     dplyr::mutate(
+      return_50d = pdiff(price, price_50d),
+      return_100d = pdiff(price, price_100d),
       return_200d = pdiff(price, price_200d),
       above_52w_low = pdiff(price, price_52w_lo),
       below_52w_high = pdiff(price, price_52w_hi)
@@ -55,29 +56,18 @@ clean_data_stocks <- function(dat){
     dplyr::select(-starts_with("price"))
 }
 
-calculate_perc_above_200d <- function(dat){
+calculate_perc_above_sma <- function(dat, val){
   dat %>% 
-    dplyr::mutate(above = return_200d >= 0) %>% 
+    dplyr::select(x = dplyr::matches(val)) %>% 
+    dplyr::mutate(above = x >= 0) %>% 
     dplyr::pull(above) %>% 
     mean(na.rm = TRUE)
 }
 
 create_display_row <- function(get_ticker, etfs, stocks){
   
-  # % sectors above
-  what_sector <- switch(
-    get_ticker,
-    "SPY" = "lrg",
-    "RSP" = "ew",
-    "IWM" = "small",
-    NA
-  )
-  p_sectors <- etfs %>% 
-    dplyr::filter(category2 == what_sector) %>% 
-    calculate_perc_above_200d()
-  
   # % components above
-  if( !stringr::str_detect(get_ticker, "^X") ){
+  p_components_0 <- if( !stringr::str_detect(get_ticker, "^X") ){
     what_size <- switch(
       get_ticker, 
       "SPY" = "LRG",
@@ -86,9 +76,7 @@ create_display_row <- function(get_ticker, etfs, stocks){
       "IWM" = "SML", 
       NA
     )
-    p_components <- stocks %>% 
-      dplyr::filter(size == what_size) %>% 
-      calculate_perc_above_200d()
+    dplyr::filter(stocks, size == what_size)
   } else{
     what_s_sector <- switch(
       get_ticker, 
@@ -105,9 +93,7 @@ create_display_row <- function(get_ticker, etfs, stocks){
       "XLV" = "Health Care",
       NA
     )
-    p_components <- stocks %>% 
-      dplyr::filter(sector == what_s_sector) %>% 
-      calculate_perc_above_200d()
+    dplyr::filter(stocks, sector == what_s_sector & size == "LRG")
   }
 
   # add to performance table
@@ -115,14 +101,14 @@ create_display_row <- function(get_ticker, etfs, stocks){
     dplyr::filter(ticker == get_ticker) %>% 
     dplyr::mutate(
       ticker = get_ticker,
-      p_components = p_components,
-      p_sectors = p_sectors
+      p_components_50d = calculate_perc_above_sma(p_components_0, "50d"),
+      p_components_100d = calculate_perc_above_sma(p_components_0, "100d"),
+      p_components_200d = calculate_perc_above_sma(p_components_0, "200d")
     ) %>% 
     dplyr::select(
       ticker,
-      return_200d, dplyr::starts_with("p"), 
-      dplyr::starts_with("return"),
-      dplyr::matches("52w"), rsi14
+      dplyr::matches("components"),
+      return_200d
     ) 
 }
 
@@ -210,30 +196,27 @@ tabulate_performance_etfs <- function(dat, sub = NULL){
       "1M %" = "return_1m",
       "3M %" = "return_3m",
       "6M %" = "return_6m",
-      "200D %" = "return_200d",
       "1Y %" = "return_1y", 
       "YTD %" = "return_ytd", 
-      "Prior YTD %" = "return_prev_ytd",
+      "200D %" = "return_200d",
       'Above 52W Low %' = 'above_52w_low',
-      "Below 52W High %" = "below_52w_high",
-      "RSI" = "rsi14"
+      "Below 52W High %" = "below_52w_high"
     ),  
     class = 'cell-border compact hover',
     filter = 'bottom',
     select = 'none',
     options = list(
       dom = 'tr', # table display
-      order = list(list(10, 'desc')), # default order based on 52w high
+      order = list(list(ncol(tab_data)-1, 'desc')), # default order based on 52w high
       pageLength = nrow(tab_data), # minimal scrolling
       scrollX = TRUE, scrollY = min(375, nrow(tab_data)*30)
     )
   ) %>% 
     # formatting
-    formatPercentage(3:11, digits = 1) %>% 
+    formatPercentage(3:ncol(tab_data), digits = 1) %>% 
     formatStyle(1, fontWeight = "bold") %>% 
-    formatStyle(3:11, color = styleInterval(0, c("red", "green"))) %>% 
-    formatStyle(3:11, color = styleEqual(0, "black")) %>% 
-    formatStyle(12, color = styleInterval(c(30, 70), c("orange", "black", "orange")))
+    formatStyle(3:ncol(tab_data), color = styleInterval(0, c("red", "green"))) %>% 
+    formatStyle(3:ncol(tab_data), color = styleEqual(0, "black")) 
 }
 
 tabulate_performance_stocks <- function(dat, sub = NULL){
@@ -244,7 +227,8 @@ tabulate_performance_stocks <- function(dat, sub = NULL){
   }
   
   tab_data <- tab_data0 %>% 
-    dplyr::mutate_at(dplyr::vars(sector, size), factor)
+    dplyr::mutate_at(dplyr::vars(sector, size), factor) %>% 
+    dplyr::select(-return_50d, -return_100d)
   
   # tabulate
   DT::datatable(
@@ -274,54 +258,43 @@ tabulate_performance_stocks <- function(dat, sub = NULL){
     )
   ) %>% 
     # formatting
-    formatPercentage(5:7, digits = 1) %>% 
+    formatPercentage(5:ncol(tab_data), digits = 1) %>% 
     formatStyle(1, fontWeight = "bold") %>% 
-    formatStyle(5:7, color = styleInterval(0, c("red", "green"))) %>% 
-    formatStyle(3:11, color = styleEqual(0, "black"))
+    formatStyle(5:ncol(tab_data), color = styleInterval(0, c("red", "green"))) %>% 
+    formatStyle(5:ncol(tab_data), color = styleEqual(0, "black"))
 }
 
 display_table_summary <- function(etfs, stocks){
   
   tab_data <- purrr::map_dfr(
-    c("SPY", "RSP", "IJH", "IWM", "XLB", "XLE", "XLF", "XLI", "XLC", "XLK", "XLY", "XLRE", "XLP", "XLU", "XLV"), 
+    c("SPY", "RSP", "IJH", "IWM", "XLF", "XLI", "XLB", "XLE", "XLY", "XLK", "XLC", "XLRE", "XLP", "XLU", "XLV"), 
     create_display_row, etfs, stocks
-  ) %>% 
-    dplyr::mutate(rank = c(1:4, rep(5, 11))) %>% 
-    dplyr::arrange(rank, dplyr::desc(return_200d)) %>% 
-    dplyr::select(-rank)
+  )
   
   DT::datatable(
     tab_data,
     rownames = FALSE,
     colnames = c(
       "Ticker" = "ticker",
-      "% Components Above 200D" = "p_components",
-      "% Sectors Above 200D" = "p_sectors",
-      "200D %" = "return_200d",
-      "1M %" = "return_1m",
-      "3M %" = "return_3m",
-      "6M %" = "return_6m",
-      "1Y %" = "return_1y", 
-      "YTD %" = "return_ytd", 
-      "Prior YTD %" = "return_prev_ytd",
-      'Above 52W Low %' = 'above_52w_low',
-      "Below 52W High %" = "below_52w_high",
-      "RSI" = "rsi14"
-    ),  
+      "% Above 50D" = "p_components_50d",
+      "% Above 100D" = "p_components_100d",
+      "% Above 200D" = "p_components_200d",
+      "200D %" = "return_200d"
+    ),
     class = 'cell-border compact hover',
     select = 'none',
     options = list(
       dom = 'tr', # table display
-      columnDefs = list(list(className = 'dt-center', targets = 0:12)),
+      columnDefs = list(list(className = 'dt-center', targets = 0:(ncol(tab_data)-1))),
       pageLength = 15,
-      scrollX = TRUE, scrollY = 400
+      scrollX = TRUE, scrollY = 435
     )
   ) %>% 
     # formatting
-    formatPercentage(2:12, digits = 1) %>% 
+    formatPercentage(2:ncol(tab_data), digits = 1) %>% 
     formatStyle(1, fontWeight = "bold") %>% 
-    formatStyle(c(2, 5:12), color = styleInterval(0, c("red", "green"))) %>% 
-    formatStyle(c(2, 5:12), color = styleEqual(0, "black")) %>% 
-    formatStyle(13, color = styleInterval(c(30, 70), c("orange", "black", "orange")))
+    formatStyle(5, color = styleInterval(0, c("red", "green"))) %>% 
+    formatStyle(5, color = styleEqual(0, "black")) %>% 
+    formatStyle(2:4, backgroundColor = styleInterval(c(1/3, 2/3), c(rgb(1,0,0,.15), "white", rgb(0,1,0,.15))))
 }
 
