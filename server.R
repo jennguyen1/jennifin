@@ -47,7 +47,7 @@ shinyServer(function(input, output) {
         ),
         options = list(
           dom = 't',
-          columnDefs = list(list(className = 'dt-center', targets = 0:4)),
+          columnDefs = list(list(className = 'dt-center', targets = 0:(ncol(disp_data)-1))),
           pageLength = nrow(disp_data),
           scrollY = 400
         )
