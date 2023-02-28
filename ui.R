@@ -68,7 +68,7 @@ etfs <- tabItem(
     )),
     tabPanel("Performance", box(
       width = NULL, 
-      div(DT::DTOutput("tab_performance_etf"), style = "margin: 0 auto; max-width: 1050px")
+      div(DT::DTOutput("tab_performance_etf"), style = "margin: 0 auto; max-width: 900px")
     ))
   )
 )
@@ -95,7 +95,7 @@ stocks <- tabItem(
     )),
     tabPanel("Performance", box(
       width = NULL,
-      div(DT::DTOutput("tab_performance_stock"), style = "margin: 0 auto; max-width: 1050px")
+      div(DT::DTOutput("tab_performance_stock"), style = "margin: 0 auto; max-width: 900px")
     ))
   )
 )
