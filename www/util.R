@@ -267,7 +267,7 @@ tabulate_performance_stocks <- function(dat, sub = NULL){
 display_table_summary <- function(etfs, stocks){
   
   tab_data <- purrr::map_dfr(
-    c("SPY", "RSP", "IJH", "IWM", "XLF", "XLI", "XLB", "XLE", "XLY", "XLK", "XLC", "XLRE", "XLP", "XLU", "XLV"), 
+    c("SPY", "IJH", "IWM", "XLF", "XLI", "XLB", "XLE", "XLY", "XLK", "XLC", "XLRE", "XLP", "XLU", "XLV"), 
     create_display_row, etfs, stocks
   )
   
@@ -287,7 +287,7 @@ display_table_summary <- function(etfs, stocks){
       dom = 'tr', # table display
       columnDefs = list(list(className = 'dt-center', targets = 0:(ncol(tab_data)-1))),
       pageLength = 15,
-      scrollX = TRUE, scrollY = 435
+      scrollX = TRUE, scrollY = 410
     )
   ) %>% 
     # formatting
@@ -295,6 +295,6 @@ display_table_summary <- function(etfs, stocks){
     formatStyle(1, fontWeight = "bold") %>% 
     formatStyle(5, color = styleInterval(0, c("red", "green"))) %>% 
     formatStyle(5, color = styleEqual(0, "black")) %>% 
-    formatStyle(2:4, backgroundColor = styleInterval(c(1/3, 2/3), c(rgb(1,0,0,.15), "white", rgb(0,1,0,.15))))
+    formatStyle(2:4, backgroundColor = styleInterval(c(1/3, 0.4999, 2/3), c(rgb(1,0,0,.15), rgb(1, 1, 0, 0.2), "white", rgb(0,1,0,.15))))
 }
 
