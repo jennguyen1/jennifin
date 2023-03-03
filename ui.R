@@ -45,7 +45,7 @@ main <- tabItem(
       title = "Major Market Summary", 
       solidHeader = TRUE, collapsible = FALSE,
       p(),
-      div(DT::DTOutput("tab_performance_major"), style = "margin: 0 auto; max-width: 800px"),
+      div(DT::DTOutput("tab_performance_major"), style = "margin: 0 auto; max-width: 900px"),
       p(), br(), p()
     )
   )

@@ -52,7 +52,7 @@ shinyServer(function(input, output) {
           scrollY = 400
         )
       ) %>% 
-      formatStyle(1, fontWeight = "bold") 
+      DT::formatStyle(1, fontWeight = "bold") 
   })
   
   proxy_dt_etf = dataTableProxy("tab_select_etf")
