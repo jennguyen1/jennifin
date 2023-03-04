@@ -41,10 +41,7 @@ shinyServer(function(input, output) {
           "Category 2" = "category2"
         ), 
         class = 'cell-border compact hover',
-        filter = list(
-          position = "top",
-          clear = FALSE
-        ),
+        filter = list(position = "top", clear = FALSE),
         options = list(
           dom = 't',
           columnDefs = list(list(className = 'dt-center', targets = 0:(ncol(disp_data)-1))),

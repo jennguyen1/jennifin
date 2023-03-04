@@ -222,8 +222,8 @@ tabulate_performance_etfs <- function(dat, sub = NULL){
     # formatting
     DT::formatPercentage(3:ncol(tab_data), digits = 1) %>% 
     DT::formatStyle(1, fontWeight = "bold") %>% 
-    DT::formatStyle(3:ncol(tab_data), color = styleInterval(0, c("red", "green"))) %>% 
-    DT::formatStyle(3:ncol(tab_data), color = styleEqual(0, "black")) 
+    DT::formatStyle(3:ncol(tab_data), color = DT::styleInterval(0, c("red", "green"))) %>% 
+    DT::formatStyle(3:ncol(tab_data), color = DT::styleEqual(0, "black")) 
 }
 
 tabulate_performance_stocks <- function(dat, sub = NULL){
@@ -251,24 +251,26 @@ tabulate_performance_stocks <- function(dat, sub = NULL){
       "Below 52W High %" = "below_52w_high"
     ),  
     class = 'cell-border compact hover',
-    filter = list(
-      position = 'top',
-      clear = FALSE
-    ),
-    select = 'multiple', 
+    filter = list(position = 'top', clear = FALSE),
+    select = 'none', 
+    extensions = "Buttons",
     options = list(
-      dom = 'tr', # table display
+      dom = 'Btr', # table display
+      buttons = list(list( # export list
+          extend = "csv", text = "Download",
+          filename = paste0("stock_list_", stringr::str_replace_all(Sys.Date(), "-", "_"))
+      )),
       order = list(list(6, 'desc')), # default order based on 52w high
       columnDefs = list(list(className = 'dt-center', targets = 3)),
       pageLength = nrow(tab_data), # minimal scrolling
-      scrollX = TRUE, scrollY = 375
+      scrollX = TRUE, scrollY = 370
     )
   ) %>% 
     # formatting
     DT::formatPercentage(5:ncol(tab_data), digits = 1) %>% 
     DT::formatStyle(1, fontWeight = "bold") %>% 
-    DT::formatStyle(5:ncol(tab_data), color = styleInterval(0, c("red", "green"))) %>% 
-    DT::formatStyle(5:ncol(tab_data), color = styleEqual(0, "black"))
+    DT::formatStyle(5:ncol(tab_data), color = DT::styleInterval(0, c("red", "green"))) %>% 
+    DT::formatStyle(5:ncol(tab_data), color = DT::styleEqual(0, "black"))
 }
 
 display_table_summary <- function(etfs, stocks){
@@ -302,8 +304,8 @@ display_table_summary <- function(etfs, stocks){
     # formatting
     DT::formatPercentage(2:ncol(tab_data), digits = 1) %>% 
     DT::formatStyle(1, fontWeight = "bold") %>% 
-    DT::formatStyle(c(5, ncol(tab_data)), color = styleInterval(0, c("red", "green"))) %>% 
-    DT::formatStyle(c(5, ncol(tab_data)), color = styleEqual(0, "black")) %>% 
-    DT::formatStyle(c(2:4, 6), backgroundColor = styleInterval(c(1/3, 0.4999, 2/3), c(rgb(1,0,0,.15), rgb(1, 1, 0, 0.2), "white", rgb(0,1,0,.15))))
+    DT::formatStyle(c(5, ncol(tab_data)), color = DT::styleInterval(0, c("red", "green"))) %>% 
+    DT::formatStyle(c(5, ncol(tab_data)), color = DT::styleEqual(0, "black")) %>% 
+    DT::formatStyle(c(2:4, 6), backgroundColor = DT::styleInterval(c(1/3, 0.4999, 2/3), c(rgb(1,0,0,.15), rgb(1, 1, 0, 0.2), "white", rgb(0,1,0,.15))))
 }
 
