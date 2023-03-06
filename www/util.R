@@ -3,20 +3,38 @@
 
 today <- Sys.Date()
 last_year <- lubridate::year(today)-2
+anchor_msg = "Feb High" # note this may change
 
 
-### table creation ###
-
+### general functions ###
 pdiff <- function(x, base) round((x-base)/base, 3)
 
-calc_rsi_14 <- function(ticker){
+calc_rsi_14 <- function(ticker, i = 1:252){
+  use_ticker <- plyr::mapvalues(
+    ticker, # ticker transcription if needed
+    c("BRKB", "MOG.A"), 
+    c("BRK-B", "MOG-A"), 
+    warn_missing = FALSE
+  )
+  
   tryCatch({
-    tidyquant::tq_get(ticker, from = today - 252) %>% 
-    dplyr::mutate(rsi = TTR::RSI(close, n = 14)) %>% 
-    tail(1) %>% 
-    dplyr::pull(rsi) %>% 
-    round(1)
+    tidyquant::tq_get(use_ticker, from = today - 252*2) %>% 
+      dplyr::mutate(rsi = TTR::RSI(close, n = 14)) %>% 
+      dplyr::arrange(dplyr::desc(date)) %>% 
+      dplyr::select(date, rsi) %>% 
+      head(252) %>% 
+      dplyr::slice(i) %>% 
+      dplyr::pull(rsi) 
   }, error = function(e) NA
+  )
+}
+
+get_rsi_stats <- function(ticker){
+  rsi <- calc_rsi_14(ticker)
+  data.frame(
+    rsi = rsi[1],
+    days_since_os = dplyr::coalesce(which(rsi < 30)[1] - 1, 252),
+    days_since_ob = dplyr::coalesce(which(rsi > 70)[1] - 1, 252)
   )
 }
 
@@ -27,6 +45,9 @@ calc_sma <- function(ticker, n){
     tail(1) %>%
     dplyr::pull(sma)
 }
+
+
+### table creation ###
 
 clean_data_etfs <- function(dat){
   dat %>% 
@@ -53,6 +74,7 @@ clean_data_stocks <- function(dat){
       return_200d = pdiff(price, price_200d),
       above_52w_low = pdiff(price, price_52w_lo),
       below_52w_high = pdiff(price, price_52w_hi),
+      return_1m = pdiff(price, price_1m),
       return_anchor = pdiff(price, price_anchor)
     ) %>% 
     dplyr::select(-starts_with("price"))
@@ -97,7 +119,7 @@ create_display_row <- function(get_ticker, etfs, stocks){
     )
     dplyr::filter(stocks, sector == what_s_sector & size == "LRG")
   }
-
+  
   # add to performance table
   etfs %>% 
     dplyr::filter(ticker == get_ticker) %>% 
@@ -112,7 +134,11 @@ create_display_row <- function(get_ticker, etfs, stocks){
       ticker,
       dplyr::matches("components_\\d+d"), return_200d, 
       p_components_anchor, return_anchor
-    ) 
+    ) %>% 
+    dplyr::rename_with(~ plyr::mapvalues(., 
+                         c("p_components_anchor", "return_anchor"), 
+                         c(paste("% Above", anchor_msg), paste(anchor_msg, "%")))
+    )
 }
 
 
@@ -280,6 +306,8 @@ display_table_summary <- function(etfs, stocks){
     create_display_row, etfs, stocks
   )
   
+  anchor_cut <- quantile(tab_data[, 6, drop = TRUE], c(0.25, 0.75))
+  
   DT::datatable(
     tab_data,
     rownames = FALSE,
@@ -288,9 +316,7 @@ display_table_summary <- function(etfs, stocks){
       "% Above 50D" = "p_components_50d",
       "% Above 100D" = "p_components_100d",
       "% Above 200D" = "p_components_200d",
-      "200D %" = "return_200d",
-      "% Above Aug High" = "p_components_anchor", # note: anchor name may change
-      "Aug High %" = "return_anchor"
+      "200D %" = "return_200d"
     ),
     class = 'cell-border compact hover',
     select = 'none',
@@ -302,10 +328,11 @@ display_table_summary <- function(etfs, stocks){
     )
   ) %>% 
     # formatting
-    DT::formatPercentage(2:ncol(tab_data), digits = 1) %>% 
+    DT::formatPercentage(2:7, digits = 1) %>% 
     DT::formatStyle(1, fontWeight = "bold") %>% 
-    DT::formatStyle(c(5, ncol(tab_data)), color = DT::styleInterval(0, c("red", "green"))) %>% 
-    DT::formatStyle(c(5, ncol(tab_data)), color = DT::styleEqual(0, "black")) %>% 
-    DT::formatStyle(c(2:4, 6), backgroundColor = DT::styleInterval(c(1/3, 0.4999, 2/3), c(rgb(1,0,0,.15), rgb(1, 1, 0, 0.2), "white", rgb(0,1,0,.15))))
+    DT::formatStyle(c(5, 7), color = DT::styleInterval(0, c("red", "green"))) %>% 
+    DT::formatStyle(c(5, 7), color = DT::styleEqual(0, "black")) %>% 
+    DT::formatStyle(c(2:4), backgroundColor = DT::styleInterval(c(1/3, 0.4999, 2/3), c(rgb(1,0,0,.15), rgb(1, 1, 0, 0.2), "white", rgb(0,1,0,.15)))) %>% 
+    DT::formatStyle(6, backgroundColor = DT::styleInterval(anchor_cut, c(rgb(1,0,0,.15), "white", rgb(0,1,0,.15))))
 }
 
