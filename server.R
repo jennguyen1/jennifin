@@ -8,9 +8,6 @@ library(shinyWidgets)
 library(plotly)
 library(DT)
 
-# pull in code & data
-source("www/util.R")
-
 
 # server functions
 shinyServer(function(input, output) {
@@ -90,16 +87,42 @@ shinyServer(function(input, output) {
     )
   })
   
+  output$select_stock_in_ta_screen <- renderUI({
+    div(
+      strong("Technical Analysis Screen"),
+      awesomeCheckbox(
+        inputId = "screen_stock_in_ta_screen",
+        label = "In TA Screen", 
+        value = FALSE
+      )
+    )
+  })
+  
+  output$select_stock_msg <- renderUI({
+    sub_tickers <- stocks %>%
+      filter_stocks(
+        sz = input$screen_stock_size, sct = input$screen_stock_sector, 
+        ta_scn = input$screen_stock_in_ta_screen, ta_lst = stocks_ta_screen$ticker
+      )
+    paste("Showing", length(sub_tickers), "stocks")
+  })
+  
   # stock graph & tables
   output$graph_lead_lag_stock <- plotly::renderPlotly({
-    sub_tickers <- stocks %>% 
-      filter_stocks(sz = input$screen_stock_size, sct = input$screen_stock_sector) 
+    sub_tickers <- stocks %>%
+      filter_stocks(
+        sz = input$screen_stock_size, sct = input$screen_stock_sector, 
+        ta_scn = input$screen_stock_in_ta_screen, ta_lst = stocks_ta_screen$ticker
+      )
     ggplotly( graph_lead_lag(stocks, sub = sub_tickers, color = sector) )
   })
   
   output$tab_performance_stock <- DT::renderDT({
-    sub_tickers <- stocks %>% 
-      filter_stocks(sz = input$screen_stock_size, sct = input$screen_stock_sector) 
+    sub_tickers <- stocks %>%
+      filter_stocks(
+        sz = input$screen_stock_size, sct = input$screen_stock_sector, 
+        ta_scn = input$screen_stock_in_ta_screen, ta_lst = stocks_ta_screen$ticker
+      )
     tabulate_performance_stocks(stocks, sub_tickers)
   })
 

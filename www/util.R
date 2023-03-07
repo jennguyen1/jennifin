@@ -33,6 +33,7 @@ get_rsi_stats <- function(ticker){
   rsi <- calc_rsi_14(ticker)
   data.frame(
     rsi = rsi[1],
+    rsi2 = rsi[10], # todo
     days_since_os = dplyr::coalesce(which(rsi < 30)[1] - 1, 252),
     days_since_ob = dplyr::coalesce(which(rsi > 70)[1] - 1, 252)
   )
@@ -44,6 +45,14 @@ calc_sma <- function(ticker, n){
     dplyr::mutate(sma = TTR::SMA(close, n = n)) %>%
     tail(1) %>%
     dplyr::pull(sma)
+}
+
+calculate_perc_above <- function(dat, val){
+  dat %>% 
+    dplyr::select(x = dplyr::matches(val)) %>% 
+    dplyr::mutate(above = x >= 0) %>% 
+    dplyr::pull(above) %>% 
+    mean(na.rm = TRUE)
 }
 
 
@@ -80,12 +89,24 @@ clean_data_stocks <- function(dat){
     dplyr::select(-starts_with("price"))
 }
 
-calculate_perc_above <- function(dat, val){
-  dat %>% 
-    dplyr::select(x = dplyr::matches(val)) %>% 
-    dplyr::mutate(above = x >= 0) %>% 
-    dplyr::pull(above) %>% 
-    mean(na.rm = TRUE)
+apply_technical_screen <- function(dat, etfs){
+  spy_1m <- dplyr::filter(etfs, ticker == "SPY")$return_1m
+  
+  # initial filter based 200D, S/R & RS to spy
+  d1 <- dat %>% 
+    dplyr::filter(return_200d > 0) %>%  # keep above 200d SMA
+    dplyr::filter(return_anchor > 0) %>% # keep above anchor DATE high (target something like 52w high for SP1500)
+    dplyr::filter(return_1m > spy_1m)  # remove laggards to SPY over last 1m
+  
+  # filter those in bullish rsi regime
+  d2 <- d1 %>% 
+    dplyr::mutate(rsi = purrr::map(ticker, get_rsi_stats)) %>% 
+    tidyr::unnest(rsi) %>% 
+    dplyr::filter(days_since_os > 21*3) %>% # remove if oversold in the last 3m
+    dplyr::select(ticker, matches("type"), matches("category"), dplyr::matches("sector"), dplyr::matches("size"), return_200d, dplyr::matches("52"), days_since_os) 
+  
+  # sort by 52w highs
+  d2 %>% dplyr::arrange(dplyr::desc(below_52w_high))
 }
 
 create_display_row <- function(get_ticker, etfs, stocks){
@@ -144,7 +165,8 @@ create_display_row <- function(get_ticker, etfs, stocks){
 
 ### viz functions ###
 
-filter_stocks <- function(dat, sz, sct){
+filter_stocks <- function(dat, sz, sct, ta_scn, ta_lst){
+  # size & sector screen
   d_out <- if( length(sz) == 0 & length(sct) == 0 ){
     dat
   } else if( length(sct) == 0 ){
@@ -155,7 +177,14 @@ filter_stocks <- function(dat, sz, sct){
     dat %>% dplyr::filter(size %in% sz & sector %in% sct)
   }
   
-  d_out %>% dplyr::pull(ticker)
+  # ta list screen
+  if(!is.null(ta_scn)){
+    if(ta_scn){
+      d_out <- d_out %>% dplyr::filter(ticker %in% ta_lst)
+    }
+  }
+
+  d_out$ticker
 }
 
 graph_lead_lag <- function(dat, sub = NULL, ...){
@@ -281,7 +310,7 @@ tabulate_performance_stocks <- function(dat, sub = NULL){
     select = 'none', 
     extensions = "Buttons",
     options = list(
-      dom = 'Btr', # table display
+      dom = 'Btri', # table display 
       buttons = list(list( # export list
           extend = "csv", text = "Download",
           filename = paste0("stock_list_", stringr::str_replace_all(Sys.Date(), "-", "_"))
@@ -289,7 +318,7 @@ tabulate_performance_stocks <- function(dat, sub = NULL){
       order = list(list(6, 'desc')), # default order based on 52w high
       columnDefs = list(list(className = 'dt-center', targets = 3)),
       pageLength = nrow(tab_data), # minimal scrolling
-      scrollX = TRUE, scrollY = 370
+      scrollX = TRUE, scrollY = 341
     )
   ) %>% 
     # formatting

@@ -52,7 +52,7 @@ main <- tabItem(
 )
 
 # ETF view
-etfs <- tabItem(
+tab_etfs <- tabItem(
   tabName = "etfs",
   navbarPage(
     "Screen ETFs",
@@ -74,14 +74,13 @@ etfs <- tabItem(
 )
 
 # stock view
-stocks <- tabItem(
+tab_stocks <- tabItem(
   tabName = "stocks",
   navbarPage(
   "Screen Stocks",
     
     tabPanel("Filter", box(
-      width = NULL,
-      fluidRow(
+      width = NULL, fluidRow(
         column(
           width = 9, 
           plotly::plotlyOutput("graph_lead_lag_stock", height = "500px", width = "800px")
@@ -89,7 +88,10 @@ stocks <- tabItem(
         column(
           width = 3, 
           uiOutput("select_stock_size"),
-          uiOutput("select_stock_sector")
+          uiOutput("select_stock_sector"),
+          uiOutput("select_stock_in_ta_screen"),
+          hr(),
+          uiOutput("select_stock_msg")
         )
       )
     )),
@@ -97,8 +99,22 @@ stocks <- tabItem(
       width = NULL,
       div(DT::DTOutput("tab_performance_stock"), style = "margin: 0 auto; max-width: 900px")
     ))
-  )
-)
+    # tabPanel("Technical Screen", box(
+    #   width = NULL, fluidRow( # todo
+    #     wellPanel(
+    #       width = NULL,
+    #       h4("Screening Process"),
+    #       tags$ol(
+    #         tags$li("Above 200D MA"),
+    #         tags$li("Above", anchor_msg, "price"),
+    #         tags$li("Outperformance relative to SPY over trailing month"),
+    #         tags$li("Bullish momentum regime with no oversold RSI14 reading in trailing 3 months"),
+    #         tags$li("Sort by proximity by to 52-week highs")
+    #       )
+    #     )
+    #   )
+    # ))
+))
 
 
 # assemble ---------------------------------------------
@@ -114,8 +130,8 @@ function(request){
       
       tabItems(
         main,
-        etfs,
-        stocks
+        tab_etfs,
+        tab_stocks
       ),
       div(
         p("Content contained or made available through the app is provided for informational purposes only and does not constitute financial advice. No one should make any financial decisions without first conducting his or her own research and due diligence. To the maximum extent permitted by law, JN disclaims any and all liability in the event any information and/or analysis prove to be inaccurate, incomplete, unreliable, or result in any investment or other losses. You should consult with a professional to determine what may be the best for your individual needs."), 
