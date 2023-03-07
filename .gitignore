@@ -41,7 +41,5 @@ vignettes/*.pdf
 .DS_Store
 
 # Data files
-etf_screener.R
-etfs.csv
-stocks.csv
-read_time.txt
+data/
+.Rproj.user
