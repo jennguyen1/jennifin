@@ -6,6 +6,7 @@
 # open libraries
 library(shiny)
 library(shinydashboard)
+library(shinycssloaders)
 
 
 # header ---------------------------------------------
@@ -64,7 +65,7 @@ tab_etfs <- tabItem(
     )),
     tabPanel("Leaders & Laggards", box(
       width = NULL, 
-      div(plotly::plotlyOutput("graph_lead_lag_etf", height = "500px", width = "800px"), style = "margin: 0 auto; max-width: 800px")
+      div(plotly::plotlyOutput("graph_lead_lag_etf", height = "500px", width = "800px") %>% withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
     )),
     tabPanel("Performance", box(
       width = NULL, 
@@ -85,35 +86,13 @@ tab_stocks <- tabItem(
           width = 9, 
           plotly::plotlyOutput("graph_lead_lag_stock", height = "500px", width = "800px")
         ),
-        column(
-          width = 3, 
-          uiOutput("select_stock_size"),
-          uiOutput("select_stock_sector"),
-          uiOutput("select_stock_in_ta_screen"),
-          hr(),
-          uiOutput("select_stock_msg")
-        )
+        uiOutput("stocks_display") %>% withSpinner(type = 7)
       )
     )),
     tabPanel("Performance", box(
       width = NULL,
       div(DT::DTOutput("tab_performance_stock"), style = "margin: 0 auto; max-width: 900px")
     ))
-    # tabPanel("Technical Screen", box(
-    #   width = NULL, fluidRow( # todo
-    #     wellPanel(
-    #       width = NULL,
-    #       h4("Screening Process"),
-    #       tags$ol(
-    #         tags$li("Above 200D MA"),
-    #         tags$li("Above", anchor_msg, "price"),
-    #         tags$li("Outperformance relative to SPY over trailing month"),
-    #         tags$li("Bullish momentum regime with no oversold RSI14 reading in trailing 3 months"),
-    #         tags$li("Sort by proximity by to 52-week highs")
-    #       )
-    #     )
-    #   )
-    # ))
 ))
 
 

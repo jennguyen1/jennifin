@@ -68,6 +68,21 @@ shinyServer(function(input, output) {
 
   ## STOCKS ================================================================
   
+  # ta screen description
+  observeEvent(input$show_ta_msg, {
+    showModal(modalDialog(
+      title = "TA Screening Process", 
+      tags$ol(
+        tags$li("Above 200D MA"),
+        tags$li("Above", anchor_msg, "price"),
+        tags$li("Outperformance relative to SPY over trailing month"),
+        tags$li("Bullish momentum regime with no oversold RSI14 reading in trailing 3 months"),
+        tags$li("Sort by proximity by to 52-week highs")
+      ),
+      easyClose = TRUE, footer = NULL
+    ))
+  })
+  
   # stock selection
   output$select_stock_size <- renderUI({
     checkboxGroupButtons(
@@ -88,13 +103,10 @@ shinyServer(function(input, output) {
   })
   
   output$select_stock_in_ta_screen <- renderUI({
-    div(
-      strong("Technical Analysis Screen"),
-      awesomeCheckbox(
-        inputId = "screen_stock_in_ta_screen",
-        label = "In TA Screen", 
-        value = FALSE
-      )
+    awesomeCheckbox(
+      inputId = "screen_stock_in_ta_screen",
+      label = "Apply Screen", 
+      value = FALSE
     )
   })
   
@@ -124,6 +136,21 @@ shinyServer(function(input, output) {
         ta_scn = input$screen_stock_in_ta_screen, ta_lst = stocks_ta_screen$ticker
       )
     tabulate_performance_stocks(stocks, sub_tickers)
+  })
+
+  # ui output
+  output$stocks_display <- renderUI({
+    column(
+      width = 3, 
+      uiOutput("select_stock_size"),
+      uiOutput("select_stock_sector"),
+      hr(),
+      strong("Technical Analysis Screen"), 
+      actionLink("show_ta_msg", "", icon = icon("circle-info")),
+      uiOutput("select_stock_in_ta_screen"),
+      hr(),
+      uiOutput("select_stock_msg")
+    )
   })
 
 })
