@@ -135,7 +135,11 @@ shinyServer(function(input, output) {
         sz = input$screen_stock_size, sct = input$screen_stock_sector, 
         ta_scn = input$screen_stock_in_ta_screen, ta_lst = stocks_ta_screen$ticker
       )
-    tabulate_performance_stocks(stocks, sub_tickers)
+    if(input$screen_stock_in_ta_screen){
+      tabulate_performance_stocks(stocks_ta_screen, sub_tickers)
+    } else{
+      tabulate_performance_stocks(stocks, sub_tickers)
+    }
   })
 
   # ui output

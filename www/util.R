@@ -103,7 +103,7 @@ apply_technical_screen <- function(dat, etfs){
     dplyr::mutate(rsi = purrr::map(ticker, get_rsi_stats)) %>% 
     tidyr::unnest(rsi) %>% 
     dplyr::filter(days_since_os > 21*3) %>% # remove if oversold in the last 3m
-    dplyr::select(ticker, matches("type"), matches("category"), dplyr::matches("sector"), dplyr::matches("size"), return_200d, dplyr::matches("52"), days_since_os) 
+    dplyr::select(ticker, dplyr::one_of(c("company", "sector", "size")), return_200d, dplyr::matches("52"), days_since_os) 
   
   # sort by 52w highs
   d2 %>% dplyr::arrange(dplyr::desc(below_52w_high))
@@ -201,12 +201,12 @@ graph_lead_lag <- function(dat, sub = NULL, ...){
     )
   
   # scales
-  xmax <- ceiling( max(graph_data$above_52w_low, na.rm = TRUE) / 100 ) * 100
-  ymin <- floor( min(graph_data$below_52w_high, na.rm = TRUE) / 10 ) * 10
+  xmax <- ceiling( max(graph_data$above_52w_low, na.rm = TRUE) / 10 ) * 10 + 10
+  ymin <- floor( min(graph_data$below_52w_high, na.rm = TRUE) / 10 ) * 10 - 5
   
   # shading region
-  fill_green <- data.frame(x = seq(0, xmax, 10)) %>% dplyr::mutate(y = 0 - 0.25*x)
-  fill_red <- data.frame(x = seq(0, xmax, 10)) %>% dplyr::mutate(y = 0 - 2*x)
+  fill_green <- data.frame(x = seq(0, xmax, 5)) %>% dplyr::mutate(y = 0 - 0.25*x)
+  fill_red <- data.frame(x = seq(0, xmax, 5)) %>% dplyr::mutate(y = 0 - 2*x)
   
   # graph
   g <-   graph_data %>% 
@@ -225,7 +225,7 @@ graph_lead_lag <- function(dat, sub = NULL, ...){
   g +
     scale_x_continuous(expand = expansion(add = c(1,0))) +
     scale_y_continuous(expand = expansion(add = c(0,1)))  +
-    coord_cartesian(xlim = c(0, xmax), ylim = c(ymin, 0)) +
+    coord_cartesian(xlim = c(-1, xmax), ylim = c(ymin, 1)) +
     labs(x = "Above 52W Low %", y = "Below 52W High %", color = "Category") +
     theme_bw() +
     theme(
@@ -290,7 +290,7 @@ tabulate_performance_stocks <- function(dat, sub = NULL){
   
   tab_data <- tab_data0 %>% 
     dplyr::mutate_at(dplyr::vars(sector, size), factor) %>% 
-    dplyr::select(ticker, company, sector, size, return_200d, dplyr::matches("52w"))
+    dplyr::select(ticker, company, sector, size, return_200d, dplyr::matches("52w"), `Days Since OS` = dplyr::matches("days_since_os")) 
 
   # tabulate
   DT::datatable(
@@ -322,10 +322,10 @@ tabulate_performance_stocks <- function(dat, sub = NULL){
     )
   ) %>% 
     # formatting
-    DT::formatPercentage(5:ncol(tab_data), digits = 1) %>% 
+    DT::formatPercentage(5:7, digits = 1) %>% 
     DT::formatStyle(1, fontWeight = "bold") %>% 
-    DT::formatStyle(5:ncol(tab_data), color = DT::styleInterval(0, c("red", "green"))) %>% 
-    DT::formatStyle(5:ncol(tab_data), color = DT::styleEqual(0, "black"))
+    DT::formatStyle(5:7, color = DT::styleInterval(0, c("red", "green"))) %>% 
+    DT::formatStyle(5:7, color = DT::styleEqual(0, "black"))
 }
 
 display_table_summary <- function(etfs, stocks){

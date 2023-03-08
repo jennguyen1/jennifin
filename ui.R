@@ -91,7 +91,7 @@ tab_stocks <- tabItem(
     )),
     tabPanel("Performance", box(
       width = NULL,
-      div(DT::DTOutput("tab_performance_stock"), style = "margin: 0 auto; max-width: 900px")
+      div(DT::DTOutput("tab_performance_stock"), style = "margin: 0 auto; max-width: 950px")
     ))
 ))
 
