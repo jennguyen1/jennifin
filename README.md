@@ -2,7 +2,7 @@
 
 ## Check it Out!
 
-No link yet
+<https://jennifernguyen.shinyapps.io/jennifin/>
 
 
 ## Quick Summary
