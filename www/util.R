@@ -353,7 +353,7 @@ display_table_summary <- function(etfs, stocks){
       dom = 'tr', # table display
       columnDefs = list(list(className = 'dt-center', targets = 0:(ncol(tab_data)-1))),
       pageLength = 15,
-      scrollX = TRUE, scrollY = 410
+      scrollX = TRUE, scrollY = 407
     )
   ) %>% 
     # formatting

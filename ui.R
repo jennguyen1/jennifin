@@ -60,8 +60,8 @@ tab_etfs <- tabItem(
     tabPanel("Select Tickers", box(
       width = NULL,
       div(DT::DTOutput("tab_select_etf"), style = "margin: 0 auto; max-width: 800px"),
+      br(),
       div(actionButton("clear_tab_select_etf", "Deselect All"), style = "text-align: right")
-
     )),
     tabPanel("Leaders & Laggards", box(
       width = NULL, 

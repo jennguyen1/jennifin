@@ -43,7 +43,7 @@ shinyServer(function(input, output) {
           dom = 't',
           columnDefs = list(list(className = 'dt-center', targets = 0:(ncol(disp_data)-1))),
           pageLength = nrow(disp_data),
-          scrollY = 400
+          scrollY = 377
         )
       ) %>% 
       DT::formatStyle(1, fontWeight = "bold") 
