@@ -79,6 +79,13 @@ shinyServer(function(input, output) {
         tags$li("Bullish momentum regime with no oversold RSI14 reading in trailing 3 months"),
         tags$li("Sort by proximity by to 52-week highs")
       ),
+      p("Follow up by examining the charts:"),
+      tags$ul(
+        tags$li("Price chart"),
+        tags$li("Price relative to SPY and relevant sector"),
+        tags$li("RSI regime on a daily and weekly time frame"),
+        tags$li("Support/resistance levels using AVWAP and Fibonacci")
+      ),
       easyClose = TRUE, footer = NULL
     ))
   })
