@@ -3,7 +3,8 @@
 
 today <- Sys.Date()
 last_year <- lubridate::year(today)-2
-anchor_msg = "Feb High" # note this may change
+anchor_lo_msg <- "Oct Low" # note this may change
+anchor_hi_msg <- "Feb High"
 
 
 ### general functions ###
@@ -69,8 +70,8 @@ clean_data_etfs <- function(dat){
       return_200d = pdiff(price, price_200d),
       above_52w_low = pdiff(price, price_52w_lo),
       below_52w_high = pdiff(price, price_52w_hi),
-      return_anchor = pdiff(price, price_anchor)
-      # rsi14 = purrr::map_dbl(ticker, calc_rsi_14) # dont need this
+      return_anchor_lo = pdiff(price, price_anchor_lo),
+      return_anchor_hi = pdiff(price, price_anchor_hi)
     ) %>% 
     dplyr::select(-starts_with("price"))
 }
@@ -84,7 +85,8 @@ clean_data_stocks <- function(dat){
       above_52w_low = pdiff(price, price_52w_lo),
       below_52w_high = pdiff(price, price_52w_hi),
       return_1m = pdiff(price, price_1m),
-      return_anchor = pdiff(price, price_anchor)
+      return_anchor_lo = pdiff(price, price_anchor_lo),
+      return_anchor_hi = pdiff(price, price_anchor_hi)
     ) %>% 
     dplyr::select(-starts_with("price"))
 }
@@ -95,7 +97,7 @@ apply_technical_screen <- function(dat, etfs){
   # initial filter based 200D, S/R & RS to spy
   d1 <- dat %>% 
     dplyr::filter(return_200d > 0) %>%  # keep above 200d SMA
-    dplyr::filter(return_anchor > 0) %>% # keep above anchor DATE high (target something like 52w high for SP1500)
+    dplyr::filter(return_anchor_hi >= -0.05) %>% # no more than 5% below anchor DATE high (target something like 52w high for SP1500)
     dplyr::filter(return_1m > spy_1m)  # remove laggards to SPY over last 1m
   
   # filter those in bullish rsi regime
@@ -149,16 +151,18 @@ create_display_row <- function(get_ticker, etfs, stocks){
       p_components_50d = calculate_perc_above(p_components_0, "50d"),
       p_components_100d = calculate_perc_above(p_components_0, "100d"),
       p_components_200d = calculate_perc_above(p_components_0, "200d"),
-      p_components_anchor = calculate_perc_above(p_components_0, "anchor")
+      p_components_anchor_lo = calculate_perc_above(p_components_0, "anchor_lo"),
+      p_components_anchor_hi = calculate_perc_above(p_components_0, "anchor_hi")
     ) %>% 
     dplyr::select(
       ticker,
       dplyr::matches("components_\\d+d"), return_200d, 
-      p_components_anchor, return_anchor
+      p_components_anchor_lo, return_anchor_lo, 
+      p_components_anchor_hi, return_anchor_hi
     ) %>% 
     dplyr::rename_with(~ plyr::mapvalues(., 
-                         c("p_components_anchor", "return_anchor"), 
-                         c(paste("% Above", anchor_msg), paste(anchor_msg, "%")))
+                         c("p_components_anchor_lo", "return_anchor_lo", "p_components_anchor_hi", "return_anchor_hi"), 
+                         c(paste("% Above", anchor_lo_msg), paste(anchor_lo_msg, "%"), paste("% Above", anchor_hi_msg), paste(anchor_hi_msg, "%")))
     )
 }
 
@@ -335,7 +339,8 @@ display_table_summary <- function(etfs, stocks){
     create_display_row, etfs, stocks
   )
   
-  anchor_cut <- quantile(tab_data[, 6, drop = TRUE], c(0.25, 0.75))
+  anchor_lo_cut <- quantile(tab_data[, 6, drop = TRUE], c(0.25, 0.75))
+  anchor_hi_cut <- quantile(tab_data[, 8, drop = TRUE], c(0.25, 0.75))
   
   DT::datatable(
     tab_data,
@@ -357,11 +362,12 @@ display_table_summary <- function(etfs, stocks){
     )
   ) %>% 
     # formatting
-    DT::formatPercentage(2:7, digits = 1) %>% 
+    DT::formatPercentage(2:9, digits = 1) %>% 
     DT::formatStyle(1, fontWeight = "bold") %>% 
-    DT::formatStyle(c(5, 7), color = DT::styleInterval(0, c("red", "green"))) %>% 
-    DT::formatStyle(c(5, 7), color = DT::styleEqual(0, "black")) %>% 
+    DT::formatStyle(c(5, 7, 9), color = DT::styleInterval(0, c("red", "green"))) %>% 
+    DT::formatStyle(c(5, 7, 9), color = DT::styleEqual(0, "black")) %>% 
     DT::formatStyle(c(2:4), backgroundColor = DT::styleInterval(c(1/3, 0.4999, 2/3), c(rgb(1,0,0,.15), rgb(1, 1, 0, 0.2), "white", rgb(0,1,0,.15)))) %>% 
-    DT::formatStyle(6, backgroundColor = DT::styleInterval(anchor_cut, c(rgb(1,0,0,.15), "white", rgb(0,1,0,.15))))
+    DT::formatStyle(6, backgroundColor = DT::styleInterval(anchor_lo_cut, c(rgb(1,0,0,.15), "white", rgb(0,1,0,.15)))) %>% 
+    DT::formatStyle(8, backgroundColor = DT::styleInterval(anchor_hi_cut, c(rgb(1,0,0,.15), "white", rgb(0,1,0,.15))))
 }
 

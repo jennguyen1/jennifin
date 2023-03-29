@@ -74,7 +74,7 @@ shinyServer(function(input, output) {
       title = "TA Screening Process", 
       tags$ol(
         tags$li("Above 200D MA"),
-        tags$li("Above", anchor_msg, "price"),
+        tags$li("No more than 5% below", anchor_msg, "price"),
         tags$li("Outperformance relative to SPY over trailing month"),
         tags$li("Bullish momentum regime with no oversold RSI14 reading in trailing 3 months"),
         tags$li("Sort by proximity by to 52-week highs")
