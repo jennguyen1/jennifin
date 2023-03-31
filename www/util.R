@@ -10,13 +10,17 @@ anchor_hi_msg <- "Feb High"
 ### general functions ###
 pdiff <- function(x, base) round((x-base)/base, 3)
 
-calc_rsi_14 <- function(ticker, i = 1:252){
-  use_ticker <- plyr::mapvalues(
+clean_ticker <- function(ticker){
+  plyr::mapvalues(
     ticker, # ticker transcription if needed
     c("BRKB", "MOG.A"), 
     c("BRK-B", "MOG-A"), 
     warn_missing = FALSE
   )
+}
+
+calc_rsi_14 <- function(ticker, i = 1:252){
+  use_ticker <- clean_ticker(ticker)
   
   tryCatch({
     tidyquant::tq_get(use_ticker, from = today - 252*2) %>% 
@@ -40,12 +44,20 @@ get_rsi_stats <- function(ticker){
   )
 }
 
-calc_sma <- function(ticker, n){
-  assertthat::assert_that(n <= 600)
-  tidyquant::tq_get(ticker, from = today - 756) %>%
-    dplyr::mutate(sma = TTR::SMA(close, n = n)) %>%
-    tail(1) %>%
-    dplyr::pull(sma)
+get_sma_slope <- function(ticker, n = 200){
+  use_ticker <- clean_ticker(ticker)
+  
+  tryCatch({
+    sma <- tidyquant::tq_get(use_ticker, from = today - 756) %>%
+      dplyr::mutate(sma = TTR::SMA(close, n = n)) %>%
+      tail(11) %>% 
+      dplyr::pull(sma)
+    
+    b4 <- head(sma, 1)
+    af <- tail(sma, 1)
+    (af - b4) / 10
+  }, error = function(e) NA
+  )
 }
 
 calculate_perc_above <- function(dat, val){
@@ -97,13 +109,17 @@ apply_technical_screen <- function(dat, etfs){
   # initial filter based 200D, S/R & RS to spy
   d1 <- dat %>% 
     dplyr::filter(return_200d > 0) %>%  # keep above 200d SMA
-    dplyr::filter(return_anchor_hi >= -0.05) %>% # no more than 5% below anchor DATE high (target something like 52w high for SP1500)
+    dplyr::filter(return_anchor_hi >= 0) %>% # at or above anchor DATE high (target something like 52w high for SP1500)
     dplyr::filter(return_1m > spy_1m)  # remove laggards to SPY over last 1m
   
   # filter those in bullish rsi regime
   d2 <- d1 %>% 
-    dplyr::mutate(rsi = purrr::map(ticker, get_rsi_stats)) %>% 
+    dplyr::mutate(
+      sma200_slope = purrr::map_dbl(ticker, get_sma_slope),
+      rsi = purrr::map(ticker, get_rsi_stats)
+    ) %>% 
     tidyr::unnest(rsi) %>% 
+    dplyr::filter(sma200_slope > 0) %>% # keep if 200d SMA slope positive over past 2 weeks
     dplyr::filter(days_since_os > 21*3) %>% # remove if oversold in the last 3m
     dplyr::select(ticker, dplyr::one_of(c("company", "sector", "size")), return_200d, dplyr::matches("52"), days_since_os) 
   
