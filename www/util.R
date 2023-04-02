@@ -55,8 +55,18 @@ get_sma_slope <- function(ticker, n = 200){
     
     b4 <- head(sma, 1)
     af <- tail(sma, 1)
-    (af - b4) / 10
+    (af - b4) / 10 / b4 * 100
   }, error = function(e) NA
+  )
+}
+
+get_sma_slope_direction <- function(ticker, n = 200){
+  slope <- get_sma_slope(ticker, n)
+  
+  dplyr::case_when(
+    slope > 0.01 ~ "+", 
+    slope < -0.01 ~ "-",
+    TRUE ~ "0"
   )
 }
 
@@ -80,6 +90,7 @@ clean_data_etfs <- function(dat){
       return_1y = pdiff(price, price_12m),
       return_ytd = pdiff(price, price_year_start),
       return_200d = pdiff(price, price_200d),
+      slope_200d = purrr::map_chr(ticker, get_sma_slope_direction),
       above_52w_low = pdiff(price, price_52w_lo),
       below_52w_high = pdiff(price, price_52w_hi),
       return_anchor_lo = pdiff(price, price_anchor_lo),
@@ -172,7 +183,8 @@ create_display_row <- function(get_ticker, etfs, stocks){
     ) %>% 
     dplyr::select(
       ticker,
-      dplyr::matches("components_\\d+d"), return_200d, 
+      dplyr::matches("components_\\d+d"), 
+      return_200d, slope_200d,
       p_components_anchor_lo, return_anchor_lo, 
       p_components_anchor_hi, return_anchor_hi
     ) %>% 
@@ -281,6 +293,7 @@ tabulate_performance_etfs <- function(dat, sub = NULL){
       "1Y %" = "return_1y", 
       "YTD %" = "return_ytd", 
       "200D %" = "return_200d",
+      "200D Slope" = "slope_200d",
       'Above 52W Low %' = 'above_52w_low',
       "Below 52W High %" = "below_52w_high"
     ),  
@@ -289,16 +302,18 @@ tabulate_performance_etfs <- function(dat, sub = NULL){
     select = 'none',
     options = list(
       dom = 'tr', # table display
+      columnDefs = list(list(className = 'dt-center', targets = 8)),
       order = list(list(ncol(tab_data)-1, 'desc')), # default order based on 52w high
       pageLength = nrow(tab_data), # minimal scrolling
       scrollX = TRUE, scrollY = min(375, nrow(tab_data)*30)
     )
   ) %>% 
     # formatting
-    DT::formatPercentage(3:ncol(tab_data), digits = 1) %>% 
+    DT::formatPercentage(c(3:8, 10:ncol(tab_data)), digits = 1) %>% 
     DT::formatStyle(1, fontWeight = "bold") %>% 
-    DT::formatStyle(3:ncol(tab_data), color = DT::styleInterval(0, c("red", "green"))) %>% 
-    DT::formatStyle(3:ncol(tab_data), color = DT::styleEqual(0, "black")) 
+    DT::formatStyle(c(3:8, 10:ncol(tab_data)), color = DT::styleInterval(0, c("red", "green"))) %>% 
+    DT::formatStyle(c(3:8, 10:ncol(tab_data)), color = DT::styleEqual(0, "black")) %>% 
+    DT::formatStyle(c(9), color = DT::styleEqual(c("-", "0", "+"), c("red", "black", "green")))
 }
 
 tabulate_performance_stocks <- function(dat, sub = NULL){
@@ -355,8 +370,8 @@ display_table_summary <- function(etfs, stocks){
     create_display_row, etfs, stocks
   )
   
-  anchor_lo_cut <- quantile(tab_data[, 6, drop = TRUE], c(0.25, 0.75))
-  anchor_hi_cut <- quantile(tab_data[, 8, drop = TRUE], c(0.25, 0.75))
+  anchor_lo_cut <- quantile(tab_data[, 7, drop = TRUE], c(0.25, 0.75))
+  anchor_hi_cut <- quantile(tab_data[, 9, drop = TRUE], c(0.25, 0.75))
   
   DT::datatable(
     tab_data,
@@ -366,7 +381,8 @@ display_table_summary <- function(etfs, stocks){
       "% Above 50D" = "p_components_50d",
       "% Above 100D" = "p_components_100d",
       "% Above 200D" = "p_components_200d",
-      "200D %" = "return_200d"
+      "200D %" = "return_200d",
+      "200D Slope" = "slope_200d"
     ),
     class = 'cell-border compact hover',
     select = 'none',
@@ -378,12 +394,13 @@ display_table_summary <- function(etfs, stocks){
     )
   ) %>% 
     # formatting
-    DT::formatPercentage(2:9, digits = 1) %>% 
+    DT::formatPercentage(c(2:5, 7:10), digits = 1) %>% 
     DT::formatStyle(1, fontWeight = "bold") %>% 
-    DT::formatStyle(c(5, 7, 9), color = DT::styleInterval(0, c("red", "green"))) %>% 
-    DT::formatStyle(c(5, 7, 9), color = DT::styleEqual(0, "black")) %>% 
+    DT::formatStyle(c(5, 8, 10), color = DT::styleInterval(0, c("red", "green"))) %>% 
+    DT::formatStyle(c(5, 8, 10), color = DT::styleEqual(0, "black")) %>% 
+    DT::formatStyle(c(6), color = DT::styleEqual(c("-", "0", "+"), c("red", "black", "green"))) %>% 
     DT::formatStyle(c(2:4), backgroundColor = DT::styleInterval(c(1/3, 0.4999, 2/3), c(rgb(1,0,0,.15), rgb(1, 1, 0, 0.2), "white", rgb(0,1,0,.15)))) %>% 
-    DT::formatStyle(6, backgroundColor = DT::styleInterval(anchor_lo_cut, c(rgb(1,0,0,.15), "white", rgb(0,1,0,.15)))) %>% 
-    DT::formatStyle(8, backgroundColor = DT::styleInterval(anchor_hi_cut, c(rgb(1,0,0,.15), "white", rgb(0,1,0,.15))))
+    DT::formatStyle(7, backgroundColor = DT::styleInterval(anchor_lo_cut, c(rgb(1,0,0,.15), "white", rgb(0,1,0,.15)))) %>% 
+    DT::formatStyle(9, backgroundColor = DT::styleInterval(anchor_hi_cut, c(rgb(1,0,0,.15), "white", rgb(0,1,0,.15))))
 }
 

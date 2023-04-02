@@ -46,10 +46,10 @@ main <- tabItem(
       title = "Major Market Summary", 
       solidHeader = TRUE, collapsible = FALSE,
       p(),
-      div(DT::DTOutput("tab_performance_major"), style = "margin: 0 auto; max-width: 900px"),
+      div(DT::DTOutput("tab_performance_major")%>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 950px"),
       p(), br(), p()
     )
-  )
+  ) 
 )
 
 # ETF view
@@ -65,11 +65,11 @@ tab_etfs <- tabItem(
     )),
     tabPanel("Leaders & Laggards", box(
       width = NULL, 
-      div(plotly::plotlyOutput("graph_lead_lag_etf", height = "500px", width = "800px") %>% withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
+      div(plotly::plotlyOutput("graph_lead_lag_etf", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
     )),
     tabPanel("Performance", box(
       width = NULL, 
-      div(DT::DTOutput("tab_performance_etf"), style = "margin: 0 auto; max-width: 900px")
+      div(DT::DTOutput("tab_performance_etf"), style = "margin: 0 auto; max-width: 950px")
     ))
   )
 )
@@ -86,7 +86,7 @@ tab_stocks <- tabItem(
           width = 9, 
           plotly::plotlyOutput("graph_lead_lag_stock", height = "500px", width = "800px")
         ),
-        uiOutput("stocks_display") %>% withSpinner(type = 7)
+        uiOutput("stocks_display") %>% shinycssloaders::withSpinner(type = 7)
       )
     )),
     tabPanel("Performance", box(
