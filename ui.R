@@ -46,7 +46,7 @@ main <- tabItem(
       title = "Major Market Summary", 
       solidHeader = TRUE, collapsible = FALSE,
       p(),
-      div(DT::DTOutput("tab_performance_major")%>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 950px"),
+      div(DT::DTOutput("tab_performance_major"), style = "margin: 0 auto; max-width: 950px"),
       p(), br(), p()
     )
   ) 
