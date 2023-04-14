@@ -26,7 +26,7 @@ create_display_row <- function(get_ticker, etfs, stocks){
       "SPY" = "LRG",
       "RSP" = "LRG", 
       "IJH" = "MID",
-      "IWM" = "SML", 
+      "IJR" = "SML", 
       NA
     )
     dplyr::filter(stocks, size == what_size)
@@ -245,7 +245,7 @@ tabulate_performance_stocks <- function(dat, sub = NULL){
 display_table_summary <- function(etfs, stocks){
   
   tab_data <- purrr::map_dfr(
-    c("SPY", "IJH", "IWM", "XLF", "XLI", "XLB", "XLE", "XLY", "XLK", "XLC", "XLRE", "XLP", "XLU", "XLV"), 
+    c("SPY", "IJH", "IJR", "XLF", "XLI", "XLB", "XLE", "XLY", "XLK", "XLC", "XLRE", "XLP", "XLU", "XLV"), 
     create_display_row, etfs, stocks
   )
   
