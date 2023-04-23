@@ -165,4 +165,74 @@ shinyServer(function(input, output) {
     )
   })
 
+  
+  ## MISC ================================================================
+  
+  output$graph_breadth <- renderPlot({
+    
+    grp <- stocks %>% 
+      dplyr::distinct(sector) %>% 
+      dplyr::arrange(sector) %>% 
+      dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "growth", "cyclical", "growth", "defensive"))
+    
+    df <- stocks %>% 
+      dplyr::left_join(grp, "sector") %>% 
+      dplyr::select(ticker, sector, group, ends_with("d")) %>% 
+      dplyr::mutate(dplyr::across(dplyr::ends_with("d"), \(x) x > 0))
+    
+    sdf <- df %>% 
+      dplyr::summarise(across(
+        dplyr::ends_with("d"),
+        \(x) mean(x, na.rm = TRUE)
+      )) %>% 
+      dplyr::mutate(group = "all")
+    
+    adf <- df %>% 
+      dplyr::group_by(group) %>% 
+      dplyr::summarise(dplyr::across(
+        dplyr::ends_with("d"),
+        \(x) mean(x, na.rm = TRUE)
+      ))
+    
+    dplyr::bind_rows(sdf, adf) %>% 
+      tidyr::pivot_longer(-group) %>% 
+      dplyr::mutate(days = factor(readr::parse_number(name))) %>% 
+      ggplot(aes(days, value, group = group, color = group)) +
+      geom_line(linewidth = 1.5) +
+      geom_hline(yintercept = c(0, 1), color = "grey50") +
+      geom_hline(yintercept = 0.5, color = "grey50", linetype = "dashed") +
+      scale_color_manual(values = c("black", "limegreen", "tomato", "dodgerblue")) +
+      labs(x = "Moving Average", y = "Proportion of Stocks Above", color = "") + 
+      theme_bw() +
+      theme(
+        legend.position = "top",
+        panel.grid.minor = element_blank(), 
+        panel.grid.major = element_blank(),
+        text = element_text(family = "Arial", size = 18)
+      )
+  })
+  
+  output$graph_gex <- renderPlot({
+    use_n <- 21
+    
+    gex <- read.csv('https://squeezemetrics.com/monitor/static/DIX.csv') %>% 
+      dplyr::mutate(date = lubridate::as_date(date)) %>% 
+      tail(use_n)
+    
+    gex %>% 
+      ggplot() +
+      geom_tile(aes('a', use_n - as.numeric(date), fill = gex < 0), color = "black") +
+      geom_text(aes('a', use_n - as.numeric(date), label = format(date, "%b %d"))) +
+      scale_fill_manual(values = c("white", "lawngreen")) +
+      labs(x = "", y = "", subtitle = "Negative GEX Signals") +
+      theme(
+        legend.position = "none",
+        panel.grid.major = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(), 
+        aspect.ratio = 3
+      ) 
+  })
+  
+  
 })

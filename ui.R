@@ -28,6 +28,7 @@ sidebar <- dashboardSidebar(
     menuItem("Major Markets", tabName = "main", icon = icon("house")),
     menuItem("Screen ETFs", tabName = "etfs", icon = icon("layer-group")),
     menuItem("Screen Stocks", tabName = "stocks", icon = icon("chart-line")),
+    menuItem("Misc Data", tabName = "misc", icon = icon("otter")),
     menuItem("Github Source Code", href = "https://github.com/jennguyen1/jennifin", icon = icon("github"))
   ),
   div(
@@ -95,6 +96,22 @@ tab_stocks <- tabItem(
     ))
 ))
 
+# miscellaneous
+tab_misc <- tabItem(
+  tabName = "misc",
+  navbarPage(
+    "Misc Data",
+    
+    tabPanel("Breadth by Group", box(
+      width = NULL,
+      div(plotOutput("graph_breadth", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
+    )),
+    tabPanel("GEX", box(
+      width = NULL, # todo
+      plotOutput("graph_gex", height = "500px") %>% shinycssloaders::withSpinner(type = 7)
+    ))
+))
+
 
 # assemble ---------------------------------------------
 
@@ -110,7 +127,8 @@ function(request){
       tabItems(
         main,
         tab_etfs,
-        tab_stocks
+        tab_stocks,
+        tab_misc
       ),
       div(
         p("Content contained or made available through the app is provided for informational purposes only and does not constitute financial advice. No one should make any financial decisions without first conducting his or her own research and due diligence. To the maximum extent permitted by law, JN disclaims any and all liability in the event any information and/or analysis prove to be inaccurate, incomplete, unreliable, or result in any investment or other losses. You should consult with a professional to determine what may be the best for your individual needs."), 
