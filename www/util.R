@@ -261,8 +261,8 @@ display_table_summary <- function(etfs, stocks){
     create_display_row, etfs, stocks
   )
   
-  anchor_lo_cut <- quantile(tab_data[, 7, drop = TRUE], c(0.25, 0.75), na.rm = TRUE)
-  anchor_hi_cut <- quantile(tab_data[, 9, drop = TRUE], c(0.25, 0.75), na.rm = TRUE)
+  anchor_lo_cut <- quantile(tab_data[1:14, 7, drop = TRUE], c(0.25, 0.75))
+  anchor_hi_cut <- quantile(tab_data[1:14, 9, drop = TRUE], c(0.25, 0.75))
   
   DT::datatable(
     tab_data,
@@ -285,7 +285,8 @@ display_table_summary <- function(etfs, stocks){
     )
   ) %>% 
     # formatting
-    DT::formatPercentage(c(2:5, 7:10), digits = 1) %>% 
+    DT::formatPercentage(c(2:4, 7, 9), digits = 0) %>% 
+    DT::formatPercentage(c(5, 8, 10), digits = 1) %>% 
     DT::formatStyle(1, fontWeight = "bold") %>% 
     DT::formatStyle(c(5, 8, 10), color = DT::styleInterval(0, c("red", "green"))) %>% 
     DT::formatStyle(c(5, 8, 10), color = DT::styleEqual(0, "black")) %>% 
