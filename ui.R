@@ -25,7 +25,7 @@ header <- dashboardHeader(
 sidebar <- dashboardSidebar(
   collapsed = FALSE,
   sidebarMenu(
-    menuItem("Major Markets", tabName = "main", icon = icon("house")),
+    menuItem("Market Summary", tabName = "main", icon = icon("house")),
     menuItem("Screen ETFs", tabName = "etfs", icon = icon("layer-group")),
     menuItem("Screen Stocks", tabName = "stocks", icon = icon("chart-line")),
     menuItem("Misc Data", tabName = "misc", icon = icon("otter")),
@@ -44,11 +44,10 @@ main <- tabItem(
   verticalLayout(
     box(
       width = NULL,
-      title = "Major Market Summary", 
+      title = "Market Summary", 
       solidHeader = TRUE, collapsible = FALSE,
-      p(),
       div(DT::DTOutput("tab_performance_major"), style = "margin: 0 auto; max-width: 950px"),
-      p(), br(), p()
+      br()
     )
   ) 
 )

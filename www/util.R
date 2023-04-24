@@ -7,11 +7,15 @@ anchor_hi_msg <- "Feb High"
 
 ### general functions ###
 calculate_perc_above <- function(dat, val){
-  dat %>% 
-    dplyr::select(x = dplyr::matches(val)) %>% 
-    dplyr::mutate(above = x >= 0) %>% 
-    dplyr::pull(above) %>% 
-    mean(na.rm = TRUE)
+  tryCatch({
+    dat %>% 
+      dplyr::select(x = dplyr::matches(val)) %>% 
+      dplyr::mutate(above = x >= 0) %>% 
+      dplyr::pull(above) %>% 
+      mean(na.rm = TRUE)
+  }, error = function(e){
+    NA
+  })
 }
 
 
@@ -20,7 +24,7 @@ calculate_perc_above <- function(dat, val){
 create_display_row <- function(get_ticker, etfs, stocks){
   
   # % components above
-  p_components_0 <- if( !stringr::str_detect(get_ticker, "^X") ){
+  p_components_0 <- if( !stringr::str_detect(get_ticker, "^X|^E") ){
     what_size <- switch(
       get_ticker, 
       "SPY" = "LRG",
@@ -30,8 +34,16 @@ create_display_row <- function(get_ticker, etfs, stocks){
       NA
     )
     dplyr::filter(stocks, size == what_size)
+  } else if( !stringr::str_detect(get_ticker, "^X") ){
+    what_category <- switch(
+      get_ticker, 
+      "EFA" = "developed", 
+      "EEM" = "emerging", 
+      NA
+    )
+    dplyr::filter(etfs, category2 == what_category) %>% dplyr::select(-slope_200d)
   } else{
-    what_s_sector <- switch(
+    what_sector <- switch(
       get_ticker, 
       "XLB" = "Materials",
       "XLE" = "Energy",
@@ -46,7 +58,7 @@ create_display_row <- function(get_ticker, etfs, stocks){
       "XLV" = "Health Care",
       NA
     )
-    dplyr::filter(stocks, sector == what_s_sector & size == "LRG")
+    dplyr::filter(stocks, sector == what_sector & size == "LRG")
   }
   
   # add to performance table
@@ -245,12 +257,12 @@ tabulate_performance_stocks <- function(dat, sub = NULL){
 display_table_summary <- function(etfs, stocks){
   
   tab_data <- purrr::map_dfr(
-    c("SPY", "IJH", "IJR", "XLF", "XLI", "XLB", "XLE", "XLY", "XLK", "XLC", "XLRE", "XLP", "XLU", "XLV"), 
+    c("SPY", "IJH", "IJR", "XLF", "XLI", "XLB", "XLE", "XLY", "XLK", "XLC", "XLRE", "XLP", "XLU", "XLV", "EFA", "EEM"), 
     create_display_row, etfs, stocks
   )
   
-  anchor_lo_cut <- quantile(tab_data[, 7, drop = TRUE], c(0.25, 0.75))
-  anchor_hi_cut <- quantile(tab_data[, 9, drop = TRUE], c(0.25, 0.75))
+  anchor_lo_cut <- quantile(tab_data[, 7, drop = TRUE], c(0.25, 0.75), na.rm = TRUE)
+  anchor_hi_cut <- quantile(tab_data[, 9, drop = TRUE], c(0.25, 0.75), na.rm = TRUE)
   
   DT::datatable(
     tab_data,
@@ -268,8 +280,8 @@ display_table_summary <- function(etfs, stocks){
     options = list(
       dom = 'tr', # table display
       columnDefs = list(list(className = 'dt-center', targets = 0:(ncol(tab_data)-1))),
-      pageLength = 15,
-      scrollX = TRUE, scrollY = 407
+      pageLength = 16,
+      scrollX = TRUE, scrollY = 465
     )
   ) %>% 
     # formatting
