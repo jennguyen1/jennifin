@@ -177,7 +177,7 @@ shinyServer(function(input, output) {
     
     df <- stocks %>% 
       dplyr::left_join(grp, "sector") %>% 
-      dplyr::select(ticker, sector, group, ends_with("d")) %>% 
+      dplyr::select(ticker, sector, group, dplyr::ends_with("d"), -dplyr::matches("ytd")) %>% 
       dplyr::mutate(dplyr::across(dplyr::ends_with("d"), \(x) x > 0))
     
     sdf <- df %>% 

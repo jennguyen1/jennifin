@@ -97,6 +97,7 @@ clean_data_stocks <- function(dat){
       above_52w_low = pdiff(price, price_52w_lo),
       below_52w_high = pdiff(price, price_52w_hi),
       return_1m = pdiff(price, price_1m),
+      return_ytd = pdiff(price, price_year_start),
       return_anchor_lo = pdiff(price, price_anchor_lo),
       return_anchor_hi = pdiff(price, price_anchor_hi)
     ) %>% 
