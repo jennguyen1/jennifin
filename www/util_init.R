@@ -78,8 +78,10 @@ clean_data_etfs <- function(dat){
       return_6m = pdiff(price, price_6m),
       return_1y = pdiff(price, price_12m),
       return_ytd = pdiff(price, price_year_start),
+      return_50d = pdiff(price, price_50d),
+      slope_50d = purrr::map_chr(ticker, get_sma_slope_direction, n = 50),
       return_200d = pdiff(price, price_200d),
-      slope_200d = purrr::map_chr(ticker, get_sma_slope_direction),
+      slope_200d = purrr::map_chr(ticker, get_sma_slope_direction, n = 200),
       above_52w_low = pdiff(price, price_52w_lo),
       below_52w_high = pdiff(price, price_52w_hi),
       return_anchor_lo = pdiff(price, price_anchor_lo),
@@ -91,8 +93,8 @@ clean_data_etfs <- function(dat){
 clean_data_stocks <- function(dat){
   dat %>% 
     dplyr::mutate(
+      return_20d = pdiff(price, price_20d),
       return_50d = pdiff(price, price_50d),
-      return_100d = pdiff(price, price_100d),
       return_200d = pdiff(price, price_200d),
       above_52w_low = pdiff(price, price_52w_lo),
       below_52w_high = pdiff(price, price_52w_hi),

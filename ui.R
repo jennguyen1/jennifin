@@ -44,9 +44,8 @@ main <- tabItem(
   verticalLayout(
     box(
       width = NULL,
-      title = "Market Summary", 
       solidHeader = TRUE, collapsible = FALSE,
-      div(DT::DTOutput("tab_performance_major"), style = "margin: 0 auto; max-width: 950px"),
+      div(DT::DTOutput("tab_performance_major"), style = "margin: 0 auto; max-width: 1000px"), 
       br()
     )
   ) 
@@ -69,7 +68,7 @@ tab_etfs <- tabItem(
     )),
     tabPanel("Performance", box(
       width = NULL, 
-      div(DT::DTOutput("tab_performance_etf"), style = "margin: 0 auto; max-width: 950px")
+      div(DT::DTOutput("tab_performance_etf"), style = "margin: 0 auto; max-width: 1000px")
     ))
   )
 )
@@ -101,12 +100,20 @@ tab_misc <- tabItem(
   navbarPage(
     "Misc Data",
     
+    tabPanel("SP500 YTD Distribution", box(
+      width = NULL,
+      div(plotOutput("graph_ytd_distribution", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
+    )),
     tabPanel("Breadth by Group", box(
       width = NULL,
-      div(plotOutput("graph_breadth", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
+      div(plotOutput("graph_ma_by_group", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
+    )),
+    tabPanel("Breadth by Sector", box(
+      width = NULL,
+      div(plotOutput("graph_ma_by_sector", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
     )),
     tabPanel("GEX", box(
-      width = NULL, # todo
+      width = NULL, 
       plotOutput("graph_gex", height = "500px") %>% shinycssloaders::withSpinner(type = 7)
     ))
 ))

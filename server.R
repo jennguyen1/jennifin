@@ -168,7 +168,52 @@ shinyServer(function(input, output) {
   
   ## MISC ================================================================
   
-  output$graph_breadth <- renderPlot({
+  output$graph_ytd_distribution <- renderPlot({
+    
+    sp_percentiles <- stocks %>%
+      dplyr::filter(size == "LRG" & !is.na(return_ytd)) %>% 
+      dplyr::arrange(return_ytd) %>% 
+      dplyr::mutate(i = (1:dplyr::n()) / dplyr::n()) %>% 
+      dplyr::select(i, return_ytd)
+    
+    # label for spy
+    sp_avg <- etfs %>% 
+      dplyr::filter(ticker == "SPY") %>% 
+      dplyr::pull(return_ytd)
+    sp500 <- sp_percentiles %>% 
+      dplyr::mutate(diff = abs(return_ytd - sp_avg)) %>% 
+      dplyr::arrange(diff) %>% 
+      head(1) %>% 
+      dplyr::mutate(lab = paste0("SPY\n", sp_avg*100, "%"))
+    
+    # label for median
+    med <- sp_percentiles %>% 
+      dplyr::arrange(abs(i - 0.5)) %>% 
+      head(1) %>% 
+      dplyr::mutate(lab = paste0("Median\n", return_ytd*100, "%"))
+    
+    # label locations
+    y_loci <- sp_percentiles %>% 
+      dplyr::filter(dplyr::between(i, 0.97, 0.99)) %>% 
+      head(1) %>% dplyr::pull(return_ytd)
+    
+    sp_percentiles %>% 
+      ggplot() +
+      geom_area(aes(i, return_ytd*100), color = "black", fill = "grey80") + 
+      geom_hline(yintercept = 0, color = "grey30") +
+      geom_vline(xintercept = 0.5, linetype = "dashed") +
+      geom_vline(data = sp500, aes(xintercept = i), linetype = "dashed") +
+      geom_label(data = sp500, aes(x = i, label = lab), y = y_loci*100, size = 5) +
+      geom_label(data = med, aes(x = i, label = lab), y = y_loci*100, size = 5) +
+      labs(x = "S&P Component", y = "YTD Return (%)") + 
+      theme_bw() + 
+      theme(
+        panel.grid.minor = element_blank(),
+        text = element_text(family = "Arial", size = 18)
+      )
+  })
+  
+  output$graph_ma_by_group <- renderPlot({
     
     grp <- stocks %>% 
       dplyr::distinct(sector) %>% 
@@ -180,14 +225,14 @@ shinyServer(function(input, output) {
       dplyr::select(ticker, sector, group, dplyr::ends_with("d"), -dplyr::matches("ytd")) %>% 
       dplyr::mutate(dplyr::across(dplyr::ends_with("d"), \(x) x > 0))
     
-    sdf <- df %>% 
+    sdf <- df %>% # all
       dplyr::summarise(across(
         dplyr::ends_with("d"),
         \(x) mean(x, na.rm = TRUE)
       )) %>% 
       dplyr::mutate(group = "all")
     
-    adf <- df %>% 
+    adf <- df %>% # by sector
       dplyr::group_by(group) %>% 
       dplyr::summarise(dplyr::across(
         dplyr::ends_with("d"),
@@ -212,6 +257,63 @@ shinyServer(function(input, output) {
       )
   })
   
+  output$graph_ma_by_sector <- renderPlot({
+    
+    grp <- stocks %>% 
+      dplyr::distinct(sector) %>% 
+      dplyr::arrange(sector) %>% 
+      dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "growth", "cyclical", "growth", "defensive"))
+    
+    df <- stocks %>% 
+      dplyr::left_join(grp, "sector") %>% 
+      dplyr::select(ticker, sector, group, size, ends_with("d")) %>% 
+      dplyr::mutate(dplyr::across(dplyr::ends_with("d"), \(x) x > 0))
+    
+    sdf <- df %>% # by size
+      dplyr::group_by(size) %>% 
+      dplyr::summarise(across(
+        dplyr::matches("\\dd$"),
+        \(x) mean(x, na.rm = TRUE)
+      )) %>% 
+      dplyr::mutate(group = "all") %>% 
+      dplyr::rename(sector = size)
+    
+    adf <- df %>% # by sector
+      dplyr::group_by(group, sector) %>% 
+      dplyr::summarise(dplyr::across(
+        dplyr::matches("\\dd$"),
+        \(x) mean(x, na.rm = TRUE)
+      ))
+    
+    plot_df <- dplyr::bind_rows(sdf, adf) %>% 
+      tidyr::pivot_longer(-c(group, sector)) %>% 
+      dplyr::mutate(
+        days = factor(readr::parse_number(name)),
+        sector = plyr::mapvalues(
+          sector, 
+          c("Consumer Staples", "Communication Services", "Consumer Discretionary", "Information Technology"), 
+          c("Staples", "Communications", "Discretionary", "Technology")
+        )
+      ) 
+    
+    plot_df %>% 
+      ggplot() +
+      geom_line(aes(days, value, group = sector), linewidth = 1.25) +
+      geom_text(data = plot_df %>% dplyr::filter(days == 200), aes(3.1, value, label = sector), hjust = 0) + 
+      geom_hline(yintercept = c(0, 1), color = "grey50") +
+      geom_hline(yintercept = 0.5, color = "grey50", linetype = "dashed") +
+      facet_grid(~group) + 
+      expand_limits(x = 4.5) +
+      labs(x = "Moving Average", y = "Proportion of Stocks Above", color = "") + 
+      theme_bw() +
+      theme(
+        panel.grid.minor = element_blank(), 
+        panel.grid.major = element_blank(),
+        text = element_text(family = "Arial", size = 18)
+      )
+    
+  })
+  
   output$graph_gex <- renderPlot({
     use_n <- 21
     
@@ -233,6 +335,5 @@ shinyServer(function(input, output) {
         aspect.ratio = 3
       ) 
   })
-  
   
 })
