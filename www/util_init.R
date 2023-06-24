@@ -1,3 +1,4 @@
+options(readr.show_col_types = FALSE)
 
 ## some date stuff ##
 
@@ -87,7 +88,7 @@ clean_data_etfs <- function(dat){
       return_anchor_lo = pdiff(price, price_anchor_lo),
       return_anchor_hi = pdiff(price, price_anchor_hi)
     ) %>% 
-    dplyr::select(-starts_with("price"))
+    dplyr::select(-dplyr::starts_with("price"), -dplyr::starts_with("date"))
 }
 
 clean_data_stocks <- function(dat){
@@ -103,7 +104,7 @@ clean_data_stocks <- function(dat){
       return_anchor_lo = pdiff(price, price_anchor_lo),
       return_anchor_hi = pdiff(price, price_anchor_hi)
     ) %>% 
-    dplyr::select(-starts_with("price"))
+    dplyr::select(-dplyr::starts_with("price"), -dplyr::starts_with("date"))
 }
 
 apply_technical_screen <- function(dat, etfs){
@@ -128,4 +129,46 @@ apply_technical_screen <- function(dat, etfs){
   
   # sort by 52w highs
   d2 %>% dplyr::arrange(dplyr::desc(below_52w_high))
+}
+
+collect_ta_stats <- function(stocks, stocks_ta){
+  
+  date <- as.Date(stringr::str_trim(readr::read_file("data/read_time.txt")))
+  file <- "data/stats_ta_screen.csv"
+  prev_data <- readr::read_csv(file)
+  
+  # current week data
+  num <- dplyr::count(stocks_ta_screen, sector)
+  den <- dplyr::count(stocks, sector)
+  row_add <- dplyr::full_join(num, den, "sector") %>% 
+    dplyr::mutate(
+      date = date,
+      sector = sector %>% stringr::str_to_lower() %>% stringr::str_replace_all("\\s+", "_"),
+      p = round(n.x/n.y*100, 1)
+    ) %>% 
+    dplyr::select(date, sector, p) %>% 
+    tidyr::pivot_wider(names_from = sector, values_from = p)
+  
+  # save
+  dplyr::bind_rows(prev_data, row_add) %>% 
+    dplyr::distinct() %>% 
+    readr::write_csv(file)
+}
+
+collect_ma_breadth_stats <- function(stocks){
+  
+  date <- as.Date(stringr::str_trim(readr::read_file("data/read_time.txt")))
+  file <- "data/stats_ma_50d_gr_200d.csv"
+  prev_data <- readr::read_csv(file)
+  
+  # current week data
+  row_add <- stocks %>% 
+    dplyr::mutate(date = date) %>% 
+    dplyr::group_by(date, size) %>% # 50d SMA > 200d SMA (inversely correlated with return %)
+    dplyr::summarise(p = round(mean(return_50d < return_200d, na.rm = TRUE)*100, 1))
+  
+  # save
+  dplyr::bind_rows(prev_data, row_add) %>% 
+    dplyr::distinct() %>% 
+    readr::write_csv(file)
 }
