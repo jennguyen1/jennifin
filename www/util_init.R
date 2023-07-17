@@ -11,8 +11,8 @@ pdiff <- function(x, base) round((x-base)/base, 3)
 clean_ticker <- function(ticker){
   plyr::mapvalues(
     ticker, # ticker transcription if needed
-    c("BRKB", "MOG.A"), 
-    c("BRK-B", "MOG-A"), 
+    c("BRKB", "MOG.A", "BF.B"), 
+    c("BRK-B", "MOG-A", "BF-B"), 
     warn_missing = FALSE
   )
 }
@@ -125,7 +125,7 @@ apply_technical_screen <- function(dat, etfs){
     tidyr::unnest(rsi) %>% 
     dplyr::filter(sma200_slope > 0) %>% # keep if 200d SMA slope positive over past 2 weeks
     dplyr::filter(days_since_os > 21*3) %>% # remove if oversold in the last 3m
-    dplyr::select(ticker, dplyr::one_of(c("company", "sector", "size")), return_200d, dplyr::matches("52"), days_since_os) 
+    dplyr::select(ticker, dplyr::one_of(c("company", "sector", "industry", "size")), return_200d, dplyr::matches("52"), days_since_os) 
   
   # sort by 52w highs
   d2 %>% dplyr::arrange(dplyr::desc(below_52w_high))
@@ -138,7 +138,7 @@ collect_ta_stats <- function(stocks, stocks_ta){
   prev_data <- readr::read_csv(file)
   
   # current week data
-  num <- dplyr::count(stocks_ta_screen, sector)
+  num <- dplyr::count(stocks_ta, sector)
   den <- dplyr::count(stocks, sector)
   row_add <- dplyr::full_join(num, den, "sector") %>% 
     dplyr::mutate(

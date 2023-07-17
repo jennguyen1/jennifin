@@ -91,6 +91,14 @@ tab_stocks <- tabItem(
     tabPanel("Performance", box(
       width = NULL,
       div(DT::DTOutput("tab_performance_stock"), style = "margin: 0 auto; max-width: 950px")
+    )),
+    tabPanel("Screen History", box(
+      width = NULL,
+      div(plotly::plotlyOutput("graph_stock_screen_hist", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px")
+    )),
+    tabPanel("Top Screened Industries", box(
+      width = NULL,
+      div(plotOutput("graph_stock_screen_industry", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px")
     ))
 ))
 

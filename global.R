@@ -1,4 +1,5 @@
 library(tidyverse)
+theme_set(theme_bw(base_family = "Arial", base_size = 16))
 
 # read files
 etfs <- readr::read_csv("data/etfs.csv")

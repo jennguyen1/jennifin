@@ -114,7 +114,7 @@ shinyServer(function(input, output) {
     awesomeCheckbox(
       inputId = "screen_stock_in_ta_screen",
       label = "Apply Screen", 
-      value = FALSE
+      value = TRUE
     )
   })
   
@@ -148,6 +148,62 @@ shinyServer(function(input, output) {
     } else{
       tabulate_performance_stocks(stocks, sub_tickers)
     }
+  })
+  
+  output$graph_stock_screen_hist <- plotly::renderPlotly({
+    plot_data <- readr::read_csv("data/stats_ta_screen.csv") %>% 
+      tidyr::pivot_longer(-date, names_to = "sector", values_to = "percent")
+    
+    plot_order <- plot_data %>% 
+      dplyr::filter(date == max(date)) %>% 
+      dplyr::mutate(serotype = forcats::fct_reorder(sector, dplyr::desc(percent))) %>% 
+      dplyr::pull(serotype) %>% levels()
+    
+    g <- plot_data %>% 
+      dplyr::mutate(sector = factor(sector, levels = plot_order)) %>% 
+      ggplot(aes(date, percent)) +
+      # geom_area(fill = "grey70") +
+      geom_bar(stat = "identity", color = "black", fill = "grey70") +
+      facet_wrap(~sector) +
+      scale_x_date(date_breaks = "1 month") + 
+      labs(x = "", y = "% of Sector in TA Screen") + 
+      theme_bw() +
+      theme(
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank()
+      )
+    
+    plotly::ggplotly(g)
+  })
+  
+  output$graph_stock_screen_industry <- renderPlot({
+    plot_data <- dplyr::full_join(
+      stocks_ta_screen %>% dplyr::count(industry), 
+      stocks %>% dplyr::count(sector, industry),
+      "industry",
+      suffix = c("_num", "_den")
+    ) %>% 
+      dplyr::mutate(
+        perc = n_num / n_den * 100,
+        perc = ifelse(is.na(perc), 0, perc),
+        industry = forcats::fct_reorder(factor(industry), perc)
+      ) %>% 
+      dplyr::arrange(industry) %>% 
+      tail(30)
+    
+    plot_data %>% 
+      ggplot(aes(industry, perc, fill = sector)) +
+      geom_bar(stat = "identity", color = "black") +
+      scale_y_continuous(limits = c(0, 100)) +
+      scale_fill_brewer(palette = "Set3") +
+      labs(x = "Industry", y = "% of Industry in TA Screen", fill = "Sector") +
+      coord_flip() + 
+      theme(
+        legend.position = "top", 
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor = element_blank()
+      )
   })
 
   # ui output
@@ -206,11 +262,13 @@ shinyServer(function(input, output) {
       geom_label(data = sp500, aes(x = i, label = lab), y = y_loci*100, size = 5) +
       geom_label(data = med, aes(x = i, label = lab), y = y_loci*100, size = 5) +
       labs(x = "S&P Component", y = "YTD Return (%)") + 
-      theme_bw() + 
       theme(
-        panel.grid.minor = element_blank(),
-        text = element_text(family = "Arial", size = 18)
+        panel.grid.minor = element_blank()
       )
+  })
+  
+  output$graph_trend_strength <- renderPlot({
+    # todo
   })
   
   output$graph_ma_by_group <- renderPlot({
@@ -218,7 +276,7 @@ shinyServer(function(input, output) {
     grp <- stocks %>% 
       dplyr::distinct(sector) %>% 
       dplyr::arrange(sector) %>% 
-      dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "growth", "cyclical", "growth", "defensive"))
+      dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
     
     df <- stocks %>% 
       dplyr::left_join(grp, "sector") %>% 
@@ -248,12 +306,10 @@ shinyServer(function(input, output) {
       geom_hline(yintercept = 0.5, color = "grey50", linetype = "dashed") +
       scale_color_manual(values = c("black", "limegreen", "tomato", "dodgerblue")) +
       labs(x = "Moving Average", y = "Proportion of Stocks Above", color = "") + 
-      theme_bw() +
       theme(
         legend.position = "top",
         panel.grid.minor = element_blank(), 
-        panel.grid.major = element_blank(),
-        text = element_text(family = "Arial", size = 18)
+        panel.grid.major = element_blank()
       )
   })
   
@@ -262,7 +318,7 @@ shinyServer(function(input, output) {
     grp <- stocks %>% 
       dplyr::distinct(sector) %>% 
       dplyr::arrange(sector) %>% 
-      dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "growth", "cyclical", "growth", "defensive"))
+      dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
     
     df <- stocks %>% 
       dplyr::left_join(grp, "sector") %>% 
@@ -291,8 +347,8 @@ shinyServer(function(input, output) {
         days = factor(readr::parse_number(name)),
         sector = plyr::mapvalues(
           sector, 
-          c("Consumer Staples", "Communication Services", "Consumer Discretionary", "Information Technology"), 
-          c("Staples", "Communications", "Discretionary", "Technology")
+          c("Consumer Staples", "Communication Services", "Consumer Discretionary"), 
+          c("Staples", "Communications", "Discretionary")
         )
       ) 
     
@@ -305,11 +361,9 @@ shinyServer(function(input, output) {
       facet_grid(~group) + 
       expand_limits(x = 4.5) +
       labs(x = "Moving Average", y = "Proportion of Stocks Above", color = "") + 
-      theme_bw() +
       theme(
         panel.grid.minor = element_blank(), 
-        panel.grid.major = element_blank(),
-        text = element_text(family = "Arial", size = 18)
+        panel.grid.major = element_blank()
       )
     
   })
@@ -327,6 +381,7 @@ shinyServer(function(input, output) {
       geom_text(aes('a', use_n - as.numeric(date), label = format(date, "%b %d"))) +
       scale_fill_manual(values = c("white", "lawngreen")) +
       labs(x = "", y = "", subtitle = "Negative GEX Signals") +
+      theme_gray() + 
       theme(
         legend.position = "none",
         panel.grid.major = element_blank(),
