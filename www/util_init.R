@@ -85,8 +85,8 @@ clean_data_etfs <- function(dat){
       slope_200d = purrr::map_chr(ticker, get_sma_slope_direction, n = 200),
       above_52w_low = pdiff(price, price_52w_lo),
       below_52w_high = pdiff(price, price_52w_hi),
-      return_anchor_lo = pdiff(price, price_anchor_lo),
-      return_anchor_hi = pdiff(price, price_anchor_hi)
+      return_anchor_1 = pdiff(price, price_anchor_1),
+      return_anchor_2 = pdiff(price, price_anchor_2)
     ) %>% 
     dplyr::select(-dplyr::starts_with("price"), -dplyr::starts_with("date"))
 }
@@ -101,8 +101,8 @@ clean_data_stocks <- function(dat){
       below_52w_high = pdiff(price, price_52w_hi),
       return_1m = pdiff(price, price_1m),
       return_ytd = pdiff(price, price_year_start),
-      return_anchor_lo = pdiff(price, price_anchor_lo),
-      return_anchor_hi = pdiff(price, price_anchor_hi)
+      return_anchor_1 = pdiff(price, price_anchor_1),
+      return_anchor_2 = pdiff(price, price_anchor_2)
     ) %>% 
     dplyr::select(-dplyr::starts_with("price"), -dplyr::starts_with("date"))
 }
@@ -113,7 +113,7 @@ apply_technical_screen <- function(dat, etfs){
   # initial filter based 200D, S/R & RS to spy
   d1 <- dat %>% 
     dplyr::filter(return_200d > 0) %>%  # keep above 200d SMA
-    dplyr::filter(return_anchor_hi >= 0) %>% # at or above anchor DATE high (target something like 52w high for SP1500)
+    dplyr::filter(return_anchor_1 >= 0) %>% # at or above anchor DATE high (target something like 52w high for SP1500)
     dplyr::filter(return_1m > spy_1m)  # remove laggards to SPY over last 1m
   
   # filter those in bullish rsi regime
@@ -167,6 +167,28 @@ collect_ma_breadth_stats <- function(stocks){
     dplyr::group_by(date, size) %>% # 50d SMA > 200d SMA (inversely correlated with return %)
     dplyr::summarise(p = round(mean(return_50d < return_200d, na.rm = TRUE)*100, 1))
   
+  # save
+  dplyr::bind_rows(prev_data, row_add) %>% 
+    dplyr::distinct() %>% 
+    readr::write_csv(file)
+}
+
+collect_hilo_breadth_stats <- function(stocks){
+
+  date <- as.Date(stringr::str_trim(readr::read_file("data/read_time.txt")))
+  file <- "data/stats_hilo_breadth.csv"
+  prev_data <- readr::read_csv(file)
+  
+  # current week data
+  row_add <- stocks %>% 
+    dplyr::mutate(
+      date = date,
+      sector = sector %>% stringr::str_to_lower() %>% stringr::str_replace_all("\\s+", "_")
+    ) %>% 
+    dplyr::group_by(date, sector) %>% 
+    dplyr::summarise(p = round(mean(abs(below_52w_high) < abs(above_52w_low), na.rm = TRUE)*100, 1)) %>% 
+    tidyr::pivot_wider(names_from = sector, values_from = p)
+
   # save
   dplyr::bind_rows(prev_data, row_add) %>% 
     dplyr::distinct() %>% 
