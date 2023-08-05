@@ -74,11 +74,11 @@ shinyServer(function(input, output) {
       title = "TA Screening Process", 
       tags$ol(
         tags$li("Above 200D MA"),
-        tags$li("At or above", anchor_hi_msg, "price"),
+        tags$li("At or above", anchor_msg, "price"),
         tags$li("Outperformance relative to SPY over trailing month"),
         tags$li("Increasing 200D SMA slope over past 2 weeks"),
         tags$li("Bullish momentum regime with no oversold RSI14 reading in trailing 3 months"),
-        tags$li("Sort by proximity by to 52-week highs")
+        tags$li("Sort by proximity to 52-week highs")
       ),
       p("Follow up by examining the charts:"),
       tags$ul(
@@ -169,7 +169,7 @@ shinyServer(function(input, output) {
       labs(x = "", y = "% of Sector in TA Screen") + 
       theme_bw() +
       theme(
-        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        axis.text.x = element_text(angle = 15, hjust = 1, vjust = 0.5),
         panel.grid.minor = element_blank(),
         panel.grid.major = element_blank()
       )
@@ -190,7 +190,7 @@ shinyServer(function(input, output) {
         industry = forcats::fct_reorder(factor(industry), perc)
       ) %>% 
       dplyr::arrange(industry) %>% 
-      tail(30)
+      tail(25)
     
     plot_data %>% 
       ggplot(aes(industry, perc, fill = sector)) +
@@ -300,12 +300,12 @@ shinyServer(function(input, output) {
     dplyr::bind_rows(sdf, adf) %>% 
       tidyr::pivot_longer(-group) %>% 
       dplyr::mutate(days = factor(readr::parse_number(name))) %>% 
-      ggplot(aes(days, value, group = group, color = group)) +
+      ggplot(aes(days, value*100, group = group, color = group)) +
       geom_line(linewidth = 1.5) +
-      geom_hline(yintercept = c(0, 1), color = "grey50") +
-      geom_hline(yintercept = 0.5, color = "grey50", linetype = "dashed") +
+      geom_hline(yintercept = c(0, 100), color = "grey50") +
+      geom_hline(yintercept = 50, color = "grey50", linetype = "dashed") +
       scale_color_manual(values = c("black", "limegreen", "tomato", "dodgerblue")) +
-      labs(x = "Moving Average", y = "Proportion of Stocks Above", color = "") + 
+      labs(x = "Moving Average", y = "% of Stocks Above", color = "") + 
       theme(
         legend.position = "top",
         panel.grid.minor = element_blank(), 
@@ -354,18 +354,46 @@ shinyServer(function(input, output) {
     
     plot_df %>% 
       ggplot() +
-      geom_line(aes(days, value, group = sector), linewidth = 1.25) +
-      geom_text(data = plot_df %>% dplyr::filter(days == 200), aes(3.1, value, label = sector), hjust = 0) + 
-      geom_hline(yintercept = c(0, 1), color = "grey50") +
-      geom_hline(yintercept = 0.5, color = "grey50", linetype = "dashed") +
+      geom_line(aes(days, value*100, group = sector), linewidth = 1.25) +
+      geom_text(data = plot_df %>% dplyr::filter(days == 200), aes(3.1, value*100, label = sector), hjust = 0) + 
+      geom_hline(yintercept = c(0, 100), color = "grey50") +
+      geom_hline(yintercept = 50, color = "grey50", linetype = "dashed") +
       facet_grid(~group) + 
-      expand_limits(x = 4.5) +
-      labs(x = "Moving Average", y = "Proportion of Stocks Above", color = "") + 
+      expand_limits(x = 4.75) +
+      labs(x = "Moving Average", y = "% of Stocks Above", color = "") + 
       theme(
         panel.grid.minor = element_blank(), 
         panel.grid.major = element_blank()
       )
     
+  })
+  
+  output$graph_hilo_sector <- renderPlot({
+    
+    grp <- stocks %>% 
+      dplyr::distinct(sector) %>% 
+      dplyr::arrange(sector) %>% 
+      dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
+    
+    plot_df <- stocks %>% 
+      dplyr::left_join(grp, "sector") %>% 
+      dplyr::group_by(group, sector) %>% 
+      dplyr::summarise(p = mean(abs(below_52w_high) < abs(above_52w_low), na.rm = TRUE)*100) %>% 
+      dplyr::ungroup() %>% 
+      dplyr::mutate(sector = forcats::fct_reorder(sector, p))  
+      
+    plot_df %>% 
+      ggplot(aes(sector, p, fill = group)) +
+      geom_bar(stat = "identity", color = "black") +
+      scale_y_continuous(limits = c(0, 100)) +
+      scale_fill_manual(values = c("limegreen", "tomato", "dodgerblue")) +
+      labs(x = "", y = "% Closer to 52W Highs Than Lows") + 
+      coord_flip() +
+      theme(
+        legend.position = "none",
+        panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank()
+      )
   })
   
   output$graph_gex <- renderPlot({
