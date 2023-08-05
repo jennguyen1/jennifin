@@ -1,8 +1,9 @@
 
 ## some date stuff ##
 
-anchor_lo_msg <- "Oct Low" # note this may change
-anchor_hi_msg <- "Feb High"
+anchor_1_msg <- "Feb" # note this may change
+anchor_2_msg <- "Jul"
+anchor_msg <- anchor_1_msg
 
 
 ### general functions ###
@@ -70,8 +71,8 @@ create_display_row <- function(get_ticker, etfs, stocks){
       p_components_50d = calculate_perc_above(p_components_0, "50d"),
       p_components_200d = calculate_perc_above(p_components_0, "200d"),
       ma_50d_200d = ifelse(return_50d < return_200d, "Yes", "No"), 
-      p_components_anchor_lo = calculate_perc_above(p_components_0, "anchor_lo"),
-      p_components_anchor_hi = calculate_perc_above(p_components_0, "anchor_hi")
+      p_components_anchor_1 = calculate_perc_above(p_components_0, "anchor_1"),
+      p_components_anchor_2 = calculate_perc_above(p_components_0, "anchor_2")
     ) %>% 
     dplyr::select(
       ticker,
@@ -79,12 +80,12 @@ create_display_row <- function(get_ticker, etfs, stocks){
       return_50d, slope_50d,
       return_200d, slope_200d,
       ma_50d_200d,
-      p_components_anchor_lo, return_anchor_lo, 
-      p_components_anchor_hi, return_anchor_hi
+      p_components_anchor_1, return_anchor_1, 
+      p_components_anchor_2, return_anchor_2
     ) %>% 
     dplyr::rename_with(~ plyr::mapvalues(., 
-                         c("p_components_anchor_lo", "return_anchor_lo", "p_components_anchor_hi", "return_anchor_hi"), 
-                         c(paste("% Above", anchor_lo_msg), paste(anchor_lo_msg, "%"), paste("% Above", anchor_hi_msg), paste(anchor_hi_msg, "%")))
+                         c("p_components_anchor_1", "return_anchor_1", "p_components_anchor_2", "return_anchor_2"), 
+                         c(paste("% Above", anchor_1_msg), paste(anchor_1_msg, "%"), paste("% Above", anchor_2_msg), paste(anchor_2_msg, "%")))
     )
 }
 
@@ -268,8 +269,8 @@ display_table_summary <- function(etfs, stocks){
     create_display_row, etfs, stocks
   )
   
-  anchor_lo_cut <- quantile(tab_data[1:14, 10, drop = TRUE], c(0.25, 0.75))
-  anchor_hi_cut <- quantile(tab_data[1:14, 12, drop = TRUE], c(0.25, 0.75))
+  anchor_1_cut <- quantile(tab_data[1:14, 10, drop = TRUE], c(0.25, 0.75))
+  anchor_2_cut <- quantile(tab_data[1:14, 12, drop = TRUE], c(0.25, 0.75))
   
   DT::datatable(
     tab_data,
@@ -303,7 +304,7 @@ display_table_summary <- function(etfs, stocks){
     DT::formatStyle(c(6, 8), color = DT::styleEqual(c("-", "0", "+"), c("red", "black", "green"))) %>% 
     DT::formatStyle(c(9), color = DT::styleEqual(c("No", "Yes"), c("red", "green"))) %>% 
     DT::formatStyle(c(2:4), backgroundColor = DT::styleInterval(c(1/3, 0.4999, 2/3), c(rgb(1,0,0,.15), rgb(1, 1, 0, 0.2), "white", rgb(0,1,0,.15)))) %>% 
-    DT::formatStyle(10, backgroundColor = DT::styleInterval(anchor_lo_cut, c(rgb(1,0,0,.15), "white", rgb(0,1,0,.15)))) %>% 
-    DT::formatStyle(12, backgroundColor = DT::styleInterval(anchor_hi_cut, c(rgb(1,0,0,.15), "white", rgb(0,1,0,.15))))
+    DT::formatStyle(10, backgroundColor = DT::styleInterval(anchor_1_cut, c(rgb(1,0,0,.15), "white", rgb(0,1,0,.15)))) %>% 
+    DT::formatStyle(12, backgroundColor = DT::styleInterval(anchor_2_cut, c(rgb(1,0,0,.15), "white", rgb(0,1,0,.15))))
 }
 
