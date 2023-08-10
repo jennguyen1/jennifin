@@ -162,8 +162,8 @@ shinyServer(function(input, output) {
     g <- plot_data %>% 
       dplyr::mutate(sector = factor(sector, levels = plot_order)) %>% 
       ggplot(aes(date, percent)) +
-      # geom_area(fill = "grey70") +
-      geom_bar(stat = "identity", color = "black", fill = "grey70") +
+      geom_area(fill = "grey70") +
+      # geom_bar(stat = "identity", color = "black", fill = "grey70") +
       facet_wrap(~sector) +
       scale_x_date(date_breaks = "1 month") + 
       labs(x = "", y = "% of Sector in TA Screen") + 
@@ -354,14 +354,16 @@ shinyServer(function(input, output) {
     
     plot_df %>% 
       ggplot() +
-      geom_line(aes(days, value*100, group = sector), linewidth = 1.25) +
+      geom_line(aes(days, value*100, group = sector, color = group), linewidth = 1.25) +
       geom_text(data = plot_df %>% dplyr::filter(days == 200), aes(3.1, value*100, label = sector), hjust = 0) + 
       geom_hline(yintercept = c(0, 100), color = "grey50") +
       geom_hline(yintercept = 50, color = "grey50", linetype = "dashed") +
       facet_grid(~group) + 
+      scale_color_manual(values = c("black", "limegreen", "tomato", "dodgerblue")) +
       expand_limits(x = 4.75) +
       labs(x = "Moving Average", y = "% of Stocks Above", color = "") + 
       theme(
+        legend.position = "none",
         panel.grid.minor = element_blank(), 
         panel.grid.major = element_blank()
       )
@@ -375,18 +377,29 @@ shinyServer(function(input, output) {
       dplyr::arrange(sector) %>% 
       dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
     
-    plot_df <- stocks %>% 
+    plot_df_a <- stocks %>% 
       dplyr::left_join(grp, "sector") %>% 
       dplyr::group_by(group, sector) %>% 
       dplyr::summarise(p = mean(abs(below_52w_high) < abs(above_52w_low), na.rm = TRUE)*100) %>% 
+      dplyr::ungroup() 
+    
+    plot_df <- stocks %>% 
+      dplyr::group_by(size) %>% 
+      dplyr::summarise(p = mean(abs(below_52w_high) < abs(above_52w_low), na.rm = TRUE)*100) %>% 
       dplyr::ungroup() %>% 
+      dplyr::mutate(
+        group = "all", 
+        sector = plyr::mapvalues(size, c("SML", "MID", "LRG"), c("SP600", "SP400", "SP500")), 
+        size = NULL
+      ) %>% 
+      dplyr::bind_rows(plot_df_a) %>% 
       dplyr::mutate(sector = forcats::fct_reorder(sector, p))  
       
     plot_df %>% 
       ggplot(aes(sector, p, fill = group)) +
       geom_bar(stat = "identity", color = "black") +
       scale_y_continuous(limits = c(0, 100)) +
-      scale_fill_manual(values = c("limegreen", "tomato", "dodgerblue")) +
+      scale_fill_manual(values = c("grey70", "limegreen", "tomato", "dodgerblue")) +
       labs(x = "", y = "% Closer to 52W Highs Than Lows") + 
       coord_flip() +
       theme(
