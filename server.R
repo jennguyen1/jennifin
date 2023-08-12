@@ -75,7 +75,8 @@ shinyServer(function(input, output) {
       tags$ol(
         tags$li("Above 200D MA"),
         tags$li("At or above", anchor_msg, "price"),
-        tags$li("Outperformance relative to SPY over trailing month"),
+        tags$li("Outperformance relative to SPY (+/- 1%) over trailing month"),
+        tags$li("Outperformance relative to corresponding sector (+/- 1%) over trailing month"),
         tags$li("Increasing 200D SMA slope over past 2 weeks"),
         tags$li("Bullish momentum regime with no oversold RSI14 reading in trailing 3 months"),
         tags$li("Sort by proximity to 52-week highs")
@@ -162,8 +163,8 @@ shinyServer(function(input, output) {
     g <- plot_data %>% 
       dplyr::mutate(sector = factor(sector, levels = plot_order)) %>% 
       ggplot(aes(date, percent)) +
-      geom_area(fill = "grey70") +
-      # geom_bar(stat = "identity", color = "black", fill = "grey70") +
+      # geom_area(fill = "grey70") +
+      geom_bar(stat = "identity", color = "black", fill = "grey70") +
       facet_wrap(~sector) +
       scale_x_date(date_breaks = "1 month") + 
       labs(x = "", y = "% of Sector in TA Screen") + 

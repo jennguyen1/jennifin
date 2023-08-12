@@ -3,7 +3,7 @@
 
 anchor_1_msg <- "Feb" # note this may change
 anchor_2_msg <- "Jul"
-anchor_msg <- anchor_1_msg
+anchor_msg <- anchor_2_msg
 
 
 ### general functions ###

@@ -110,11 +110,32 @@ clean_data_stocks <- function(dat){
 apply_technical_screen <- function(dat, etfs){
   spy_1m <- dplyr::filter(etfs, ticker == "SPY")$return_1m
   
-  # initial filter based 200D, S/R & RS to spy
+  sector_1m <- data.frame(
+    ticker = paste0("RSP", c("F", "N", "M", "G", "D", "T", "C", "R", "S", "U", "H")), 
+    sector = c(
+      "Financial", 
+      "Industrial", 
+      "Materials", 
+      "Energy", 
+      "Consumer Discretionary", 
+      "Technology", 
+      "Communication Services", 
+      "Real Estate",
+      "Consumer Staples", 
+      "Utilities", 
+      "Health Care"
+    )
+  ) %>% 
+    dplyr::left_join(etfs, "ticker") %>% 
+    dplyr::select(sector, return_1m)
+
+  # initial filter based 200D, S/R, RS to spy / sector
   d1 <- dat %>% 
     dplyr::filter(return_200d > 0) %>%  # keep above 200d SMA
-    dplyr::filter(return_anchor_1 >= 0) %>% # at or above anchor DATE high (target something like 52w high for SP1500)
-    dplyr::filter(return_1m > spy_1m)  # remove laggards to SPY over last 1m
+    dplyr::filter(return_anchor_2 >= 0) %>% # at or above anchor DATE high (target something like 52w high for SP1500)
+    dplyr::filter(return_1m - spy_1m > -0.01)  %>% # remove laggards to SPY over last 1m
+    dplyr::left_join(sector_1m, "sector", suffix = c("", "_sect")) %>% 
+    dplyr::filter(return_1m - return_1m_sect > -0.01)
   
   # filter those in bullish rsi regime
   d2 <- d1 %>% 
