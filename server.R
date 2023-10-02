@@ -268,10 +268,6 @@ shinyServer(function(input, output) {
       )
   })
   
-  output$graph_trend_strength <- renderPlot({
-    # todo
-  })
-  
   output$graph_ma_by_group <- renderPlot({
     
     grp <- stocks %>% 

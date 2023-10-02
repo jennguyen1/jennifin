@@ -41,6 +41,6 @@ vignettes/*.pdf
 .DS_Store
 
 # Data files
-data/
 .Rproj.user
-tmp.R
+data/*csv
+data/*txt
