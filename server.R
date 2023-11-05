@@ -301,6 +301,7 @@ shinyServer(function(input, output) {
       geom_line(linewidth = 1.5) +
       geom_hline(yintercept = c(0, 100), color = "grey50") +
       geom_hline(yintercept = 50, color = "grey50", linetype = "dashed") +
+      scale_y_continuous(breaks = seq(0, 100, 10)) + 
       scale_color_manual(values = c("black", "limegreen", "tomato", "dodgerblue")) +
       labs(x = "Moving Average", y = "% of Stocks Above", color = "") + 
       theme(
@@ -356,6 +357,7 @@ shinyServer(function(input, output) {
       geom_hline(yintercept = c(0, 100), color = "grey50") +
       geom_hline(yintercept = 50, color = "grey50", linetype = "dashed") +
       facet_grid(~group) + 
+      scale_y_continuous(breaks = seq(0, 100, 10)) + 
       scale_color_manual(values = c("black", "limegreen", "tomato", "dodgerblue")) +
       expand_limits(x = 4.75) +
       labs(x = "Moving Average", y = "% of Stocks Above", color = "") + 
@@ -365,6 +367,45 @@ shinyServer(function(input, output) {
         panel.grid.major = element_blank()
       )
     
+  })
+  
+  output$graph_uptrend_sector <- renderPlot({
+    
+    grp <- stocks %>% 
+      dplyr::distinct(sector) %>% 
+      dplyr::arrange(sector) %>% 
+      dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
+    
+    plot_df_a <- stocks %>% 
+      dplyr::left_join(grp, "sector") %>% 
+      dplyr::group_by(group, sector) %>% 
+      dplyr::summarise(p = mean(return_200d > 0 & return_50d < return_200d, na.rm = TRUE)*100) %>% 
+      dplyr::ungroup() 
+    
+    plot_df <- stocks %>% 
+      dplyr::group_by(size) %>% 
+      dplyr::summarise(p = mean(return_200d > 0 & return_50d < return_200d, na.rm = TRUE)*100) %>% 
+      dplyr::ungroup() %>% 
+      dplyr::mutate(
+        group = "all", 
+        sector = plyr::mapvalues(size, c("SML", "MID", "LRG"), c("SP600", "SP400", "SP500")), 
+        size = NULL
+      ) %>% 
+      dplyr::bind_rows(plot_df_a) %>% 
+      dplyr::mutate(sector = forcats::fct_reorder(sector, p))  
+    
+    plot_df %>% 
+      ggplot(aes(sector, p, fill = group)) +
+      geom_bar(stat = "identity", color = "black") +
+      scale_y_continuous(limits = c(0, 100)) +
+      scale_fill_manual(values = c("grey70", "limegreen", "tomato", "dodgerblue")) +
+      labs(x = "", y = "% in Uptrend") + 
+      coord_flip() +
+      theme(
+        legend.position = "none",
+        panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank()
+      )
   })
   
   output$graph_hilo_sector <- renderPlot({

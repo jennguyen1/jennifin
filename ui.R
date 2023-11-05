@@ -120,6 +120,10 @@ tab_misc <- tabItem(
       width = NULL,
       div(plotOutput("graph_ma_by_sector", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
     )),
+    tabPanel("Stocks in Uptrends", box(
+      width = NULL,
+      div(plotOutput("graph_uptrend_sector", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
+    )),    
     tabPanel("52w High/Low by Sector", box(
       width = NULL,
       div(plotOutput("graph_hilo_sector", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
