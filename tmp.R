@@ -74,7 +74,7 @@ ggplot() +
 
 
 # 50d 200d trend ---------------------------------------------------------------
-# 50d 200d todo add sep?
+# 50d 200d 
 plot_data <- readr::read_csv("data/stats_ma_50d_gr_200d.csv") %>% 
   dplyr::mutate(
     hazy = ifelse(date < lubridate::ymd("2023-03-31"), '1', '2')

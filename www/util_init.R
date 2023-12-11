@@ -132,7 +132,7 @@ apply_technical_screen <- function(dat, etfs){
   # initial filter based 200D, S/R, RS to spy / sector
   d1 <- dat %>% 
     dplyr::filter(return_200d > 0) %>%  # keep above 200d SMA
-    dplyr::filter(return_anchor_2 >= 0) %>% # at or above anchor DATE high (target something like 52w high for SP1500)
+    dplyr::filter(return_anchor_1 >= 0) %>% # at or above anchor DATE high (target something like 52w high for SP1500), note this may change
     dplyr::filter(return_1m - spy_1m > -0.01)  %>% # remove laggards to SPY over last 1m
     dplyr::left_join(sector_1m, "sector", suffix = c("", "_sect")) %>% 
     dplyr::filter(return_1m - return_1m_sect > -0.01)

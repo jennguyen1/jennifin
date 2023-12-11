@@ -1,9 +1,9 @@
 
 ## some date stuff ##
 
-anchor_1_msg <- "Feb" # note this may change
-anchor_2_msg <- "Jul"
-anchor_msg <- anchor_2_msg
+anchor_1_msg <- "Jul High" # note this may change
+anchor_2_msg <- "Oct Low" # note this may change
+anchor_msg <- anchor_1_msg # note this may change
 
 
 ### general functions ###
