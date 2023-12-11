@@ -193,25 +193,3 @@ collect_ma_breadth_stats <- function(stocks){
     dplyr::distinct() %>% 
     readr::write_csv(file)
 }
-
-collect_hilo_breadth_stats <- function(stocks){
-
-  date <- as.Date(stringr::str_trim(readr::read_file("data/read_time.txt")))
-  file <- "data/stats_hilo_breadth.csv"
-  prev_data <- readr::read_csv(file)
-  
-  # current week data
-  row_add <- stocks %>% 
-    dplyr::mutate(
-      date = date,
-      sector = sector %>% stringr::str_to_lower() %>% stringr::str_replace_all("\\s+", "_")
-    ) %>% 
-    dplyr::group_by(date, sector) %>% 
-    dplyr::summarise(p = round(mean(abs(below_52w_high) < abs(above_52w_low), na.rm = TRUE)*100, 1)) %>% 
-    tidyr::pivot_wider(names_from = sector, values_from = p)
-
-  # save
-  dplyr::bind_rows(prev_data, row_add) %>% 
-    dplyr::distinct() %>% 
-    readr::write_csv(file)
-}

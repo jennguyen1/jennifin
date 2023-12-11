@@ -43,49 +43,17 @@ id %>%
   dplyr::arrange(dplyr::desc(below_52w_high)) %>% View()
 
 
-# OB / OS - restart different google account -----------------------------------
-library(tidyverse)
-obos <- googlesheets4::read_sheet("12Tv_-fBoLMc1hcyTWw5jEzd_z3P5Q-uhjHp12j1WlTo", "OB/OS")
-
-dplyr::bind_rows(
-  obos %>% 
-    dplyr::select(date = 1, ob = 5, os = 6) %>% 
-    tidyr::pivot_longer(-date) %>% 
-    dplyr::mutate(index = "SP500"),
-  obos %>% 
-    dplyr::select(1, ob = 11, os = 12) %>% 
-    tidyr::pivot_longer(-date) %>% 
-    dplyr::mutate(index = "R2000")
-) %>% 
-  dplyr::mutate(
-    name = ifelse(name == "ob", "Overbought", "Oversold"),
-    index = factor(index, c("SP500", "R2000"))
-  ) %>% 
-  ggplot() +
-  geom_hline(yintercept = 15, linetype = "dashed") +
-  geom_histogram(aes(date, value*100, fill = name), stat = "identity") +
-  facet_grid(name ~ index) +
-  scale_fill_manual(values = c("limegreen", "tomato")) +
-  labs(x = "", y = "% Overbought or Oversold") + 
-  theme_bw() + 
-  theme(
-    legend.position = "none",
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank()
-  )
-
-
 # gex proof of concept ---------------------------------------------------------
 library(tidyquant)
 gex <- read.csv('https://squeezemetrics.com/monitor/static/DIX.csv') %>% 
   dplyr::mutate(date = lubridate::as_date(date)) %>% 
   dplyr::select(date, gex) %>% 
   dplyr::filter(gex < 0) %>% 
-  dplyr::filter(year(date) >= 2014)
+  dplyr::filter(year(date) >= 2018) # 2014
 price <- tidyquant::tq_get("SPY") %>% 
   dplyr::mutate(sma = SMA(close, 200)) %>% 
   dplyr::select(date, close, sma) %>% 
-  dplyr::filter(year(date) >= 2014)
+  dplyr::filter(year(date) >= 2018)
 
 p_gex <- gex %>% 
   dplyr::left_join(price) %>% 

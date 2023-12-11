@@ -153,7 +153,8 @@ shinyServer(function(input, output) {
   
   output$graph_stock_screen_hist <- plotly::renderPlotly({
     plot_data <- readr::read_csv("data/stats_ta_screen.csv") %>% 
-      tidyr::pivot_longer(-date, names_to = "sector", values_to = "percent")
+      tidyr::pivot_longer(-date, names_to = "sector", values_to = "percent") %>% 
+      dplyr::filter(month(date) >= (month(today())-3))
     
     plot_order <- plot_data %>% 
       dplyr::filter(date == max(date)) %>% 
@@ -256,13 +257,13 @@ shinyServer(function(input, output) {
     
     sp_percentiles %>% 
       ggplot() +
-      geom_area(aes(i, return_ytd*100), color = "black", fill = "grey80") + 
+      geom_area(aes(i*100, return_ytd*100), color = "black", fill = "grey80") + 
       geom_hline(yintercept = 0, color = "grey30") +
-      geom_vline(xintercept = 0.5, linetype = "dashed") +
-      geom_vline(data = sp500, aes(xintercept = i), linetype = "dashed") +
-      geom_label(data = sp500, aes(x = i, label = lab), y = y_loci*100, size = 5) +
-      geom_label(data = med, aes(x = i, label = lab), y = y_loci*100, size = 5) +
-      labs(x = "S&P Component", y = "YTD Return (%)") + 
+      geom_vline(xintercept = 50, linetype = "dashed") +
+      geom_vline(data = sp500, aes(xintercept = i*100), linetype = "dashed") +
+      geom_label(data = sp500, aes(x = i*100, label = lab), y = y_loci*100, size = 5) +
+      geom_label(data = med, aes(x = i*100, label = lab), y = y_loci*100, size = 5) +
+      labs(x = "S&P Component Percentile (%)", y = "YTD Return (%)") + 
       theme(
         panel.grid.minor = element_blank()
       )
@@ -363,13 +364,13 @@ shinyServer(function(input, output) {
       labs(x = "Moving Average", y = "% of Stocks Above", color = "") + 
       theme(
         legend.position = "none",
-        panel.grid.minor = element_blank(), 
-        panel.grid.major = element_blank()
+        panel.grid.minor = element_blank(),
+        panel.grid.major.x = element_blank()
       )
     
   })
   
-  output$graph_uptrend_sector <- renderPlot({
+  output$graph_uptrend_sector <- renderPlot({ # (1) >200d (2) 50d > 200d
     
     grp <- stocks %>% 
       dplyr::distinct(sector) %>% 
@@ -444,6 +445,37 @@ shinyServer(function(input, output) {
         legend.position = "none",
         panel.grid.minor = element_blank(),
         panel.grid.major.y = element_blank()
+      )
+  })
+  
+  output$graph_obos <- renderPlot({
+    d_obos <- readr::read_csv("data/obos.csv")
+    
+    dplyr::bind_rows(
+      d_obos %>% 
+        dplyr::select(date = 1, ob = 5, os = 6) %>% 
+        tidyr::pivot_longer(-date) %>% 
+        dplyr::mutate(index = "SP500"),
+      d_obos %>% 
+        dplyr::select(1, ob = 11, os = 12) %>% 
+        tidyr::pivot_longer(-date) %>% 
+        dplyr::mutate(index = "R2000")
+    ) %>% 
+      dplyr::mutate(
+        name = ifelse(name == "ob", "Overbought", "Oversold"),
+        index = factor(index, c("SP500", "R2000"))
+      ) %>% 
+      ggplot() +
+      geom_hline(yintercept = 15, linetype = "dashed") +
+      geom_histogram(aes(date, value*100, fill = name, color = name), stat = "identity") +
+      facet_grid(name ~ index) +
+      scale_fill_manual(values = c("limegreen", "tomato")) +
+      scale_color_manual(values = c("darkgreen", "darkred")) +
+      labs(x = "", y = "% Overbought or Oversold") + 
+      theme(
+        legend.position = "none",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
       )
   })
   

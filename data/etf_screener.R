@@ -3,6 +3,7 @@ library(tidyverse)
 source("www/util_init.R")
 file <- "1kOpm7h3UqQ1Onen3woMDu__-4j5on0Cdd2ZgvBuMxSM"
 # file <- "1FlxfmUhs8tLDiTRGK2qpBiIx1fVBMZs-iyL2DcQYGrY"
+obos_file <- "1O-pGX8btHlySCU7MuwU3yFvZcYq21nzfLC_CygSDRbY"
 
 ### Run Before Each Session - Refresh Prices ###
 
@@ -40,11 +41,12 @@ write_file_update <- function(){
 }
 write_file_update()
 
+d_obos <- googlesheets4::read_sheet(obos_file)
+readr::write_csv(d_obos, "data/obos.csv")
 
 # data collection
 collect_ta_stats(stocks = s, stocks_ta = s_ta)
 collect_ma_breadth_stats(stocks = s)
-collect_hilo_breadth_stats(stocks = s)
 
 
 ### Every Quarter - SP Companies ###
