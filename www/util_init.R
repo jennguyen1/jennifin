@@ -165,7 +165,7 @@ collect_ta_stats <- function(stocks, stocks_ta){
     dplyr::mutate(
       date = date,
       sector = sector %>% stringr::str_to_lower() %>% stringr::str_replace_all("\\s+", "_"),
-      p = round(n.x/n.y*100, 1)
+      p = round(n.x/n.y*100, 1) %>% tidyr::replace_na(0)
     ) %>% 
     dplyr::select(date, sector, p) %>% 
     tidyr::pivot_wider(names_from = sector, values_from = p)
