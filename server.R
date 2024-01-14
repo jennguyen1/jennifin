@@ -73,7 +73,7 @@ shinyServer(function(input, output) {
     showModal(modalDialog(
       title = "TA Screening Process", 
       tags$ol(
-        tags$li("Above 200D MA"),
+        tags$li("In an uptrend defined by being above 50DMA, 200D MA, and 50D MA > 200D MA"), 
         tags$li("At or above", anchor_msg, "price"),
         tags$li("Outperformance relative to SPY (+/- 1%) over trailing month"),
         tags$li("Outperformance relative to corresponding sector (+/- 1%) over trailing month"),
@@ -242,18 +242,19 @@ shinyServer(function(input, output) {
       dplyr::mutate(diff = abs(return_ytd - sp_avg)) %>% 
       dplyr::arrange(diff) %>% 
       head(1) %>% 
-      dplyr::mutate(lab = paste0("SPY\n", sp_avg*100, "%"))
+      dplyr::mutate(lab = paste0("SPY\n", sprintf("%.1f", sp_avg*100), "%"))
     
     # label for median
     med <- sp_percentiles %>% 
       dplyr::arrange(abs(i - 0.5)) %>% 
       head(1) %>% 
-      dplyr::mutate(lab = paste0("Median\n", return_ytd*100, "%"))
+      dplyr::mutate(lab = paste0("Median\n", sprintf("%.1f", return_ytd*100), "%"))
     
     # label locations
     y_loci <- sp_percentiles %>% 
       dplyr::filter(dplyr::between(i, 0.97, 0.99)) %>% 
       head(1) %>% dplyr::pull(return_ytd)
+    med_stagger <- if( abs(sp500$return_ytd - med$return_ytd) > 0.05 ) 1 else 2
     
     sp_percentiles %>% 
       ggplot() +
@@ -262,7 +263,7 @@ shinyServer(function(input, output) {
       geom_vline(xintercept = 50, linetype = "dashed") +
       geom_vline(data = sp500, aes(xintercept = i*100), linetype = "dashed") +
       geom_label(data = sp500, aes(x = i*100, label = lab), y = y_loci*100, size = 5) +
-      geom_label(data = med, aes(x = i*100, label = lab), y = y_loci*100, size = 5) +
+      geom_label(data = med, aes(x = i*100, label = lab), y = y_loci*100*med_stagger, size = 5) +
       labs(x = "S&P Component Percentile (%)", y = "YTD Return (%)") + 
       theme(
         panel.grid.minor = element_blank()
@@ -370,7 +371,7 @@ shinyServer(function(input, output) {
     
   })
   
-  output$graph_uptrend_sector <- renderPlot({ # (1) >200d (2) 50d > 200d
+  output$graph_uptrend_sector <- renderPlot({ # (1) >50d (2) >200d (3) 50d > 200d
     
     grp <- stocks %>% 
       dplyr::distinct(sector) %>% 
@@ -380,12 +381,12 @@ shinyServer(function(input, output) {
     plot_df_a <- stocks %>% 
       dplyr::left_join(grp, "sector") %>% 
       dplyr::group_by(group, sector) %>% 
-      dplyr::summarise(p = mean(return_200d > 0 & return_50d < return_200d, na.rm = TRUE)*100) %>% 
+      dplyr::summarise(p = mean(return_50d > 0 & return_200d > 0 & return_20d < return_50d & return_50d < return_200d, na.rm = TRUE)*100) %>% 
       dplyr::ungroup() 
     
     plot_df <- stocks %>% 
       dplyr::group_by(size) %>% 
-      dplyr::summarise(p = mean(return_200d > 0 & return_50d < return_200d, na.rm = TRUE)*100) %>% 
+      dplyr::summarise(p = mean(return_50d > 0 & return_200d > 0 & return_20d < return_50d & return_50d < return_200d, na.rm = TRUE)*100) %>% 
       dplyr::ungroup() %>% 
       dplyr::mutate(
         group = "all", 
@@ -451,7 +452,7 @@ shinyServer(function(input, output) {
   output$graph_obos <- renderPlot({
     d_obos <- readr::read_csv("data/obos.csv")
     
-    dplyr::bind_rows(
+    plot_data <- dplyr::bind_rows(
       d_obos %>% 
         dplyr::select(date = 1, ob = 5, os = 6) %>% 
         tidyr::pivot_longer(-date) %>% 
@@ -464,10 +465,17 @@ shinyServer(function(input, output) {
       dplyr::mutate(
         name = ifelse(name == "ob", "Overbought", "Oversold"),
         index = factor(index, c("SP500", "R2000"))
-      ) %>% 
+      ) 
+    
+    mx_highlight <- plot_data %>% 
+      dplyr::group_by(name, index) %>% 
+      dplyr::summarise(mx = max(value, na.rm = TRUE))
+    
+    plot_data %>% 
       ggplot() +
-      geom_hline(yintercept = 15, linetype = "dashed") +
+      geom_hline(data = mx_highlight, aes(yintercept = mx*100), linetype = "dashed") +
       geom_histogram(aes(date, value*100, fill = name, color = name), stat = "identity") +
+      geom_hline(yintercept = 0) +
       facet_grid(name ~ index) +
       scale_fill_manual(values = c("limegreen", "tomato")) +
       scale_color_manual(values = c("darkgreen", "darkred")) +
