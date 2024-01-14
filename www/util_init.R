@@ -68,7 +68,21 @@ get_sma_slope_direction <- function(ticker, n = 200){
   )
 }
 
-### table creation ###
+get_avwap_return <- function(ticker, date){
+  tidyquant::tq_get(ticker, from = date) %>% 
+    dplyr::mutate(
+      price = (open+high+low+close)/4, 
+      num = cumsum(price * volume),
+      den = cumsum(volume),
+      avwap = num/den, 
+      return_avwap = pdiff(price, avwap)
+    ) %>% 
+    dplyr::pull(return_avwap) %>% 
+    tail(1)
+}
+
+
+@### table creation ###
 
 clean_data_etfs <- function(dat){
   dat %>% 
