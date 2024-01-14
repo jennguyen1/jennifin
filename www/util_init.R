@@ -3,6 +3,7 @@ options(readr.show_col_types = FALSE)
 ## some date stuff ##
 
 today <- Sys.Date()
+year_start <- "2024-01-02"
 
 
 ### general functions ###
@@ -68,24 +69,64 @@ get_sma_slope_direction <- function(ticker, n = 200){
   )
 }
 
-get_avwap_return <- function(ticker, date){
-  tidyquant::tq_get(ticker, from = date) %>% 
+# todo: put avwap slope info into asc
+# avwap 
+get_ticker_data <- function(ticker, df_dates){
+  use_ticker <- clean_ticker(ticker)
+  use_date <- min(as.Date(df_dates))
+  tidyquant::tq_get(use_ticker, from = use_date) 
+}
+
+calculate_avwap <- function(dat){
+  dat %>% 
     dplyr::mutate(
       price = (open+high+low+close)/4, 
       num = cumsum(price * volume),
       den = cumsum(volume),
-      avwap = num/den, 
-      return_avwap = pdiff(price, avwap)
+      avwap = num/den 
     ) %>% 
-    dplyr::pull(return_avwap) %>% 
+    dplyr::pull(avwap) %>% 
     tail(1)
 }
 
+get_avwap_series <- function(ticker, df_dates){
+  tryCatch({
+    df <- get_ticker_data(ticker, df_dates$date)
+    df_dates %>% 
+      dplyr::mutate(
+        avwap = purrr::map_dbl(date, function(dt){
+          df %>% 
+            dplyr::filter(date >= dt) %>% 
+            calculate_avwap()
+        })
+      ) %>% 
+      dplyr::select(label, avwap) %>% 
+      tidyr::pivot_wider(names_from = label, values_from = avwap)
+  }, error = function(e){
+    data.frame()
+  })
+}
 
-@### table creation ###
+
+### table creation ###
 
 clean_data_etfs <- function(dat){
+  
+  # for avwap
+  date1 <- as.character(purrr::discard(unique(dat$date_1), is.na))
+  date2 <- as.character(purrr::discard(unique(dat$date_2), is.na))
+  
+  dates <- data.frame(
+    label = c("avwap_ytd", "avwap_anchor_1", "avwap_anchor_2"),
+    date = c(year_start, date1, date2)
+  )
+  
+  # cleaning
   dat %>% 
+    dplyr::mutate(
+      avwaps = purrr::map(ticker, ~ get_avwap_series(.x, dates))
+    ) %>% 
+    tidyr::unnest(avwaps) %>% 
     dplyr::mutate(
       return_1m = pdiff(price, price_1m),
       return_3m = pdiff(price, price_3m),
@@ -93,19 +134,39 @@ clean_data_etfs <- function(dat){
       return_1y = pdiff(price, price_12m),
       return_ytd = pdiff(price, price_year_start),
       return_50d = pdiff(price, price_50d),
-      slope_50d = purrr::map_chr(ticker, get_sma_slope_direction, n = 50),
       return_200d = pdiff(price, price_200d),
-      slope_200d = purrr::map_chr(ticker, get_sma_slope_direction, n = 200),
       above_52w_low = pdiff(price, price_52w_lo),
       below_52w_high = pdiff(price, price_52w_hi),
       return_anchor_1 = pdiff(price, price_anchor_1),
-      return_anchor_2 = pdiff(price, price_anchor_2)
+      return_anchor_2 = pdiff(price, price_anchor_2),
+      return_avwap_anchor_1 = pdiff(price, avwap_anchor_1),
+      return_avwap_anchor_2 = pdiff(price, avwap_anchor_2),
+      return_avwap_ytd = pdiff(price, avwap_ytd)
     ) %>% 
-    dplyr::select(-dplyr::starts_with("price"), -dplyr::starts_with("date"))
+    dplyr::select(
+      -dplyr::starts_with("price"), 
+      -dplyr::starts_with("avwap"), 
+      -dplyr::starts_with("date")
+    )
 }
 
 clean_data_stocks <- function(dat){
+  
+  # for avwap
+  date1 <- as.character(purrr::discard(unique(dat$date_1), is.na))
+  date2 <- as.character(purrr::discard(unique(dat$date_2), is.na))
+  
+  dates <- data.frame(
+    label = c("avwap_ytd", "avwap_anchor_1", "avwap_anchor_2"),
+    date = c(year_start, date1, date2)
+  )
+  
+  # cleaning
   dat %>% 
+    dplyr::mutate(
+      avwaps = purrr::map(ticker, ~ get_avwap_series(.x, dates))
+    ) %>% 
+    tidyr::unnest(avwaps) %>% 
     dplyr::mutate(
       return_20d = pdiff(price, price_20d),
       return_50d = pdiff(price, price_50d),
@@ -115,9 +176,16 @@ clean_data_stocks <- function(dat){
       return_1m = pdiff(price, price_1m),
       return_ytd = pdiff(price, price_year_start),
       return_anchor_1 = pdiff(price, price_anchor_1),
-      return_anchor_2 = pdiff(price, price_anchor_2)
+      return_anchor_2 = pdiff(price, price_anchor_2),
+      return_avwap_anchor_1 = pdiff(price, avwap_anchor_1),
+      return_avwap_anchor_2 = pdiff(price, avwap_anchor_2),
+      return_avwap_ytd = pdiff(price, avwap_ytd)
     ) %>% 
-    dplyr::select(-dplyr::starts_with("price"), -dplyr::starts_with("date"))
+    dplyr::select(
+      -dplyr::starts_with("price"), 
+      -dplyr::starts_with("avwap"), 
+      -dplyr::starts_with("date")
+    )
 }
 
 apply_technical_screen <- function(dat, etfs){
@@ -145,24 +213,31 @@ apply_technical_screen <- function(dat, etfs){
   # initial filter based 50D/200D uptrend, S/R, RS to spy / sector
   d1 <- dat %>% 
     dplyr::filter(return_50d > 0 & return_200d > 0 & return_50d < return_200d) %>%  # keep above 50d & 200d SMA and 50d SMA > 200d SMA
-    dplyr::filter(return_anchor_1 >= 0) %>% # at or above anchor DATE high (target something like 52w high for SP1500), note this may change
-    dplyr::filter(return_1m - spy_1m > -0.01)  %>% # remove laggards to SPY over last 1m
+    dplyr::filter(return_avwap_anchor_1 >= 0) %>% # at or above avwap from anchor date high (target something like 52w high for stocks), may change
+    dplyr::filter(return_1m - spy_1m > -0.01) %>% # remove laggards to SPY over last 1m
     dplyr::left_join(sector_1m, "sector", suffix = c("", "_sect")) %>% 
     dplyr::filter(return_1m - return_1m_sect > -0.01)
+    
+  # todo: last section here
+  # dplyr::filter(return_anchor_1 >= 0) %>% # at or above anchor DATE high (target something like 52w high for SP1500), note this may change
+  # dplyr::filter(days_since_os > 21*3) %>% # remove if oversold in the last 3m
+    
+  # add rsi
+  d2 <- d1 %>%
+    dplyr::mutate(rsi = purrr::map(ticker, get_rsi_stats)) %>%
+    tidyr::unnest(rsi) 
   
-  # filter those in bullish rsi regime
-  d2 <- d1 %>% 
-    dplyr::mutate(
-      sma200_slope = purrr::map_dbl(ticker, get_sma_slope),
-      rsi = purrr::map(ticker, get_rsi_stats)
-    ) %>% 
-    tidyr::unnest(rsi) %>% 
-    dplyr::filter(sma200_slope > 0) %>% # keep if 200d SMA slope positive over past 2 weeks
-    dplyr::filter(days_since_os > 21*3) %>% # remove if oversold in the last 3m
-    dplyr::select(ticker, dplyr::one_of(c("company", "sector", "industry", "size")), return_200d, dplyr::matches("52"), days_since_os) 
-  
+  d3 <- d2 %>%
+    dplyr::select(
+      ticker, 
+      dplyr::one_of(c("company", "sector", "industry", "size")), 
+      dplyr::matches("anchor_1"), return_avwap_ytd, 
+      days_since_os, 
+      dplyr::matches("52")
+    )
+
   # sort by 52w highs
-  d2 %>% dplyr::arrange(dplyr::desc(below_52w_high))
+  d3 %>% dplyr::arrange(dplyr::desc(below_52w_high))
 }
 
 collect_ta_stats <- function(stocks, stocks_ta){
