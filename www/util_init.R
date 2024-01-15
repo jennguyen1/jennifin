@@ -69,8 +69,7 @@ get_sma_slope_direction <- function(ticker, n = 200){
   )
 }
 
-# todo: put avwap slope info into asc
-# avwap 
+# avwap
 get_ticker_data <- function(ticker, df_dates){
   use_ticker <- clean_ticker(ticker)
   use_date <- min(as.Date(df_dates))
@@ -217,10 +216,6 @@ apply_technical_screen <- function(dat, etfs){
     dplyr::filter(return_1m - spy_1m > -0.01) %>% # remove laggards to SPY over last 1m
     dplyr::left_join(sector_1m, "sector", suffix = c("", "_sect")) %>% 
     dplyr::filter(return_1m - return_1m_sect > -0.01)
-    
-  # todo: last section here
-  # dplyr::filter(return_anchor_1 >= 0) %>% # at or above anchor DATE high (target something like 52w high for SP1500), note this may change
-  # dplyr::filter(days_since_os > 21*3) %>% # remove if oversold in the last 3m
     
   # add rsi
   d2 <- d1 %>%
