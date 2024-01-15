@@ -81,8 +81,8 @@ create_display_row <- function(get_ticker, etfs, stocks){
       dplyr::matches("components_\\d+d"), 
       return_50d, return_200d, ma_50d_200d,
       return_avwap_ytd, 
-      p_components_anchor_1, return_anchor_1, p_components_avwap_anchor_1, return_avwap_anchor_1,
-      p_components_anchor_2, return_anchor_2, p_components_avwap_anchor_2, return_avwap_anchor_2
+      p_components_avwap_anchor_1, return_avwap_anchor_1, p_components_anchor_1, return_anchor_1,
+      p_components_avwap_anchor_2, return_avwap_anchor_2, p_components_anchor_2, return_anchor_2
     ) %>% 
     dplyr::rename_with(~ plyr::mapvalues(., 
                          c("p_components_anchor_1", "return_anchor_1", "p_components_avwap_anchor_1", "return_avwap_anchor_1", 
@@ -191,10 +191,9 @@ tabulate_performance_etfs <- function(dat, sub = NULL){
       "6M %" = "return_6m",
       "1Y %" = "return_1y", 
       "YTD %" = "return_ytd", 
+      "YTD AVWAP %" = "return_avwap_ytd",
       "50D %" = "return_50d",
-      "50D Slope" = "slope_50d",
       "200D %" = "return_200d",
-      "200D Slope" = "slope_200d",
       'Above 52W Low' = 'above_52w_low',
       "Below 52W High" = "below_52w_high"
     ),  
@@ -203,18 +202,16 @@ tabulate_performance_etfs <- function(dat, sub = NULL){
     select = 'none',
     options = list(
       dom = 'tr', # table display
-      columnDefs = list(list(className = 'dt-center', targets = c(8, 10))),
       order = list(list(ncol(tab_data)-1, 'desc')), # default order based on 52w high
       pageLength = nrow(tab_data), # minimal scrolling
       scrollX = TRUE, scrollY = min(375, nrow(tab_data)*30)
     )
   ) %>% 
     # formatting
-    DT::formatPercentage(c(3:8, 10, 12:ncol(tab_data)), digits = 1) %>% 
+    DT::formatPercentage(c(3:ncol(tab_data)), digits = 1) %>% 
     DT::formatStyle(1, fontWeight = "bold") %>% 
-    DT::formatStyle(c(3:8, 10, 12:ncol(tab_data)), color = DT::styleInterval(0, c("red", "green"))) %>% 
-    DT::formatStyle(c(3:8, 10, 12:ncol(tab_data)), color = DT::styleEqual(0, "black")) %>% 
-    DT::formatStyle(c(9, 11), color = DT::styleEqual(c("-", "0", "+"), c("red", "black", "green")))
+    DT::formatStyle(c(3:ncol(tab_data)), color = DT::styleInterval(0, c("red", "green"))) %>% 
+    DT::formatStyle(c(3:ncol(tab_data)), color = DT::styleEqual(0, "black")) 
 }
 
 tabulate_performance_stocks <- function(dat, sub = NULL){
@@ -226,7 +223,7 @@ tabulate_performance_stocks <- function(dat, sub = NULL){
   
   tab_data <- tab_data0 %>% 
     dplyr::mutate_at(dplyr::vars(sector, industry, size), factor) %>% 
-    dplyr::select(ticker, company, sector, industry, size, return_200d, dplyr::matches("52w"), `Days Since OS` = dplyr::matches("days_since_os")) 
+    dplyr::select(ticker, company, sector, industry, size, return_50d, return_200d, dplyr::matches("52w")) 
 
   # tabulate
   DT::datatable(
@@ -238,6 +235,7 @@ tabulate_performance_stocks <- function(dat, sub = NULL){
       "Sector" = "sector", 
       "Industry" = "industry",
       "Size" = "size",
+      "50D %" = "return_50d",
       "200D %" = "return_200d",
       'Above 52W Low' = 'above_52w_low',
       "Below 52W High" = "below_52w_high"
@@ -245,24 +243,19 @@ tabulate_performance_stocks <- function(dat, sub = NULL){
     class = 'cell-border compact hover',
     filter = list(position = 'top', clear = FALSE),
     select = 'none', 
-    extensions = "Buttons",
     options = list(
-      dom = 'Btri', # table display 
-      buttons = list(list( # export list
-          extend = "csv", text = "Download",
-          filename = paste0("stock_list_", stringr::str_replace_all(Sys.Date(), "-", "_"))
-      )),
-      order = list(list(7, 'desc')), # default order based on 52w high
+      dom = 'tri', # table display 
+      order = list(list(8, 'desc')), # default order based on 52w high
       columnDefs = list(list(className = 'dt-center', targets = 4)),
       pageLength = nrow(tab_data), # minimal scrolling
       scrollX = TRUE, scrollY = 341
     )
   ) %>% 
     # formatting
-    DT::formatPercentage(6:8, digits = 1) %>% 
+    DT::formatPercentage(6:ncol(tab_data), digits = 1) %>% 
     DT::formatStyle(1, fontWeight = "bold") %>% 
-    DT::formatStyle(6:8, color = DT::styleInterval(0, c("red", "green"))) %>% 
-    DT::formatStyle(6:8, color = DT::styleEqual(0, "black"))
+    DT::formatStyle(6:ncol(tab_data), color = DT::styleInterval(0, c("red", "green"))) %>% 
+    DT::formatStyle(6:ncol(tab_data), color = DT::styleEqual(0, "black"))
 }
 
 display_table_summary <- function(etfs, stocks){
@@ -270,22 +263,17 @@ display_table_summary <- function(etfs, stocks){
   tab_data <- purrr::map_dfr( 
     c("SPY", "IJH", "IJR", "XLF", "XLI", "XLB", "XLE", "XLY", "XLK", "XLC", "XLRE", "XLP", "XLU", "XLV", "EFA", "EEM"), 
     create_display_row, etfs, stocks
-  )
-  
-  anchor_1_cut <- quantile(tab_data[1:14, 9, drop = TRUE], c(0.25, 0.75))
-  anchor_2_cut <- quantile(tab_data[1:14, 12, drop = TRUE], c(0.25, 0.75))
+  ) %>% 
+    dplyr::select(ticker, return_50d, return_200d, ma_50d_200d, return_avwap_ytd, dplyr::ends_with("%"))
   
   DT::datatable(
     tab_data,
     rownames = FALSE,
     colnames = c(
       "Ticker" = "ticker",
-      "% Above 20D" = "p_components_20d",
-      "% Above 50D" = "p_components_50d",
-      "% Above 200D" = "p_components_200d",
       "50D %" = "return_50d",
       "200D %" = "return_200d",
-      "50D > 200D" = "ma_50d_200d", 
+      "50D > 200D" = "ma_50d_200d",
       "YTD AVWAP %" = "return_avwap_ytd"
     ),
     class = 'cell-border compact hover',
@@ -296,16 +284,359 @@ display_table_summary <- function(etfs, stocks){
       pageLength = 16,
       scrollX = TRUE, scrollY = 465
     )
-  ) #%>% 
-    # # formatting
-    # DT::formatPercentage(c(2:4, 9, 12), digits = 0) %>% 
-    # DT::formatPercentage(c(5, 6, 8, 10:11, 13:14), digits = 1) %>% 
-    # DT::formatStyle(1, fontWeight = "bold") %>% 
-    # DT::formatStyle(c(5, 6, 8, 10:11, 13:14), color = DT::styleInterval(0, c("red", "green"))) %>% 
-    # DT::formatStyle(c(5, 6, 8, 10:11, 13:14), color = DT::styleEqual(0, "black")) %>% 
-    # DT::formatStyle(c(7), color = DT::styleEqual(c("No", "Yes"), c("red", "green"))) %>% 
-    # DT::formatStyle(c(2:4), backgroundColor = DT::styleInterval(c(1/3, 0.4999, 2/3), c(rgb(1,0,0,.15), rgb(1, 1, 0, 0.2), "white", rgb(0,1,0,.15)))) %>% 
-    # DT::formatStyle(9, backgroundColor = DT::styleInterval(anchor_1_cut, c(rgb(1,0,0,.15), "white", rgb(0,1,0,.15)))) %>% 
-    # DT::formatStyle(12, backgroundColor = DT::styleInterval(anchor_2_cut, c(rgb(1,0,0,.15), "white", rgb(0,1,0,.15))))
+  ) %>% 
+    # formatting
+    DT::formatPercentage(c(2:3, 5:9), digits = 1) %>%
+    DT::formatStyle(1, fontWeight = "bold") %>%
+    DT::formatStyle(c(2:3, 5:9), color = DT::styleInterval(0, c("red", "green"))) %>%
+    DT::formatStyle(c(2:3, 5:9), color = DT::styleEqual(0, "black")) %>%
+    DT::formatStyle(c(4), backgroundColor = DT::styleEqual(c("No", "Yes"), c(rgb(1,0,0,.15), rgb(0,1,0,.15)))) 
+}
+
+# breadth by sector
+graph_ma_by_group <- function(dat){
+  grp <- dat %>% 
+    dplyr::distinct(sector) %>% 
+    dplyr::arrange(sector) %>% 
+    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
+  
+  df <- dat %>% 
+    dplyr::left_join(grp, "sector") %>% 
+    dplyr::select(ticker, sector, group, dplyr::ends_with("d"), -dplyr::matches("ytd")) %>% 
+    dplyr::mutate(dplyr::across(dplyr::ends_with("d"), \(x) x > 0))
+  
+  sdf <- df %>% # all
+    dplyr::summarise(across(
+      dplyr::ends_with("d"),
+      \(x) mean(x, na.rm = TRUE)
+    )) %>% 
+    dplyr::mutate(group = "all")
+  
+  adf <- df %>% # by sector
+    dplyr::group_by(group) %>% 
+    dplyr::summarise(dplyr::across(
+      dplyr::ends_with("d"),
+      \(x) mean(x, na.rm = TRUE)
+    ))
+  
+  dplyr::bind_rows(sdf, adf) %>% 
+    tidyr::pivot_longer(-group) %>% 
+    dplyr::filter(stringr::str_detect(name, "0d$")) %>% 
+    dplyr::mutate(
+      days = factor(readr::parse_number(name)),
+      group = stringr::str_to_title(group)
+    ) %>% 
+    ggplot(aes(days, value*100, group = group, color = group)) +
+    geom_line(linewidth = 1.5) +
+    geom_hline(yintercept = c(0, 100), color = "grey50") +
+    geom_hline(yintercept = 50, color = "grey50", linetype = "dashed") +
+    scale_y_continuous(breaks = seq(0, 100, 10)) + 
+    scale_color_manual(values = c("black", "limegreen", "tomato", "dodgerblue")) +
+    labs(x = "Moving Average", y = "% of Stocks Above", color = "") + 
+    theme(
+      legend.position = "top",
+      panel.grid.minor = element_blank(), 
+      panel.grid.major = element_blank()
+    )
+}
+
+graph_ma_by_sector <- function(dat){
+  grp <- dat %>% 
+    dplyr::distinct(sector) %>% 
+    dplyr::arrange(sector) %>% 
+    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
+  
+  df <- dat %>% 
+    dplyr::left_join(grp, "sector") %>% 
+    dplyr::select(ticker, sector, group, size, ends_with("d")) %>% 
+    dplyr::mutate(dplyr::across(dplyr::ends_with("d"), \(x) x > 0))
+  
+  sdf <- df %>% # by size
+    dplyr::group_by(size) %>% 
+    dplyr::summarise(across(
+      dplyr::matches("\\dd$"),
+      \(x) mean(x, na.rm = TRUE)
+    )) %>% 
+    dplyr::mutate(group = "all") %>% 
+    dplyr::rename(sector = size)
+  
+  adf <- df %>% # by sector
+    dplyr::group_by(group, sector) %>% 
+    dplyr::summarise(dplyr::across(
+      dplyr::matches("\\dd$"),
+      \(x) mean(x, na.rm = TRUE)
+    ))
+  
+  plot_df <- dplyr::bind_rows(sdf, adf) %>% 
+    tidyr::pivot_longer(-c(group, sector)) %>% 
+    dplyr::mutate(
+      days = factor(readr::parse_number(name)),
+      sector = plyr::mapvalues(
+        sector, 
+        c("Consumer Staples", "Communication Services", "Consumer Discretionary"), 
+        c("Staples", "Communications", "Discretionary")
+      ),
+      group = factor(stringr::str_to_title(group), levels = c("All", "Growth", "Cyclical", "Defensive"))
+    ) 
+  
+  plot_df %>% 
+    ggplot() +
+    geom_line(aes(days, value*100, group = sector, color = sector), linewidth = 1.25) +
+    ggrepel::geom_text_repel(
+      data = plot_df %>% dplyr::filter(days == 200), 
+      aes(3.1, value*100, label = sector), 
+      hjust = 0, direction = "y", segment.color = NA
+    ) + 
+    geom_hline(yintercept = c(0, 100), color = "grey50") +
+    geom_hline(yintercept = 50, color = "grey50", linetype = "dashed") +
+    facet_grid(~group) + 
+    scale_y_continuous(breaks = seq(0, 100, 10)) + 
+    scale_color_manual(values = c(
+      "deepskyblue", "dodgerblue", "darkgreen", "lawngreen", "red", "green3", "black", 
+      "green4", "grey30", "lightskyblue", "grey60", "firebrick", "blue", "coral1"
+    )) +
+    expand_limits(x = 4.75) +
+    labs(x = "Moving Average", y = "% of Stocks Above", color = "") + 
+    theme(
+      legend.position = "none",
+      panel.grid.minor = element_blank(),
+      panel.grid.major.x = element_blank()
+    )
+}
+
+graph_ma_uptrend_sector <- function(dat){ # (1) >50d (2) >200d (3) 50d > 200d
+  grp <- dat %>% 
+    dplyr::distinct(sector) %>% 
+    dplyr::arrange(sector) %>% 
+    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
+  
+  plot_df_a <- dat %>% 
+    dplyr::left_join(grp, "sector") %>% 
+    dplyr::group_by(group, sector) %>% 
+    dplyr::summarise(p = mean(return_50d > 0 & return_200d > 0 & return_50d < return_200d, na.rm = TRUE)*100) %>% 
+    dplyr::ungroup() 
+  
+  plot_df <- dat %>% 
+    dplyr::group_by(size) %>% 
+    dplyr::summarise(p = mean(return_50d > 0 & return_200d > 0 & return_50d < return_200d, na.rm = TRUE)*100) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::mutate(
+      group = "all", 
+      sector = plyr::mapvalues(size, c("SML", "MID", "LRG"), c("SP600", "SP400", "SP500")), 
+      size = NULL
+    ) %>% 
+    dplyr::bind_rows(plot_df_a) %>% 
+    dplyr::mutate(
+      sector = plyr::mapvalues(
+        sector, 
+        c("Consumer Staples", "Communication Services", "Consumer Discretionary"), 
+        c("Staples", "Communications", "Discretionary")
+      ),
+      sector = forcats::fct_reorder(sector, p)
+    )  
+  
+  plot_df %>% 
+    ggplot(aes(sector, p, fill = group)) +
+    geom_bar(stat = "identity", color = "black") +
+    scale_y_continuous(limits = c(0, 100)) +
+    scale_fill_manual(values = c("grey70", "limegreen", "tomato", "dodgerblue")) +
+    labs(x = "", y = "% in Uptrend", caption = "(1) > 50DMA, (2) >200DMA, (3) 50DMA > 200DMA") + 
+    coord_flip() +
+    theme(
+      legend.position = "none",
+      panel.grid.minor = element_blank(),
+      panel.grid.major.y = element_blank()
+    )
+}
+
+graph_price_avwap_1 <- function(dat, anchor, anchor_label){
+  plot_data <- dat %>% 
+    dplyr::filter(stringr::str_detect(var, anchor)) %>% 
+    dplyr::mutate(var = ifelse(stringr::str_detect(var, "avwap"), "AVWAP", "Price"))
+    
+  plot_order <- plot_data %>% 
+    dplyr::filter(var == "Price") %>% 
+    dplyr::arrange(p) %>% 
+    dplyr::pull(sector)
+  
+  plot_data %>% 
+    dplyr::mutate(
+      sector = factor(sector, levels = plot_order), 
+      label = anchor_label
+    ) %>% 
+    ggplot(aes(sector, p, color = group)) +
+    geom_point(aes(shape = var), size = 3, stroke = 1) + 
+    geom_line(size = 1, alpha = 0.5) + 
+    facet_grid(~label) +
+    scale_y_continuous(limits = c(0, 100)) +
+    scale_shape_manual(values = c(2, 1)) + 
+    scale_color_manual(values = c("grey50", "limegreen", "tomato", "dodgerblue")) +
+    guides(color = FALSE) +
+    labs(x = "", y = "% Above", shape = "") + 
+    coord_flip() +
+    theme(
+      legend.position = "bottom", 
+      legend.spacing.x = unit(0.75, 'cm'), 
+      panel.grid.minor = element_blank(),
+      panel.grid.major.y = element_blank()
+    )
+}
+
+graph_price_avwap <- function(dat){
+  
+  grp <- dat %>% 
+    dplyr::distinct(sector) %>% 
+    dplyr::arrange(sector) %>% 
+    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
+  
+  plot_df_a <- dat %>% 
+    dplyr::left_join(grp, "sector") %>% 
+    dplyr::group_by(group, sector) %>% 
+    dplyr::summarise(
+      p_anchor_1 = mean(return_anchor_1 > 0, na.rm = TRUE) * 100,
+      p_anchor_2 = mean(return_anchor_2 > 0, na.rm = TRUE) * 100,
+      p_avwap_ytd = mean(return_avwap_ytd > 0, na.rm = TRUE) * 100,
+      p_avwap_anchor_1 = mean(return_avwap_anchor_1 > 0, na.rm = TRUE) * 100,
+      p_avwap_anchor_2 = mean(return_avwap_anchor_2 > 0, na.rm = TRUE) * 100
+    ) %>% 
+    dplyr::ungroup() 
+  
+  plot_df <- dat %>% 
+    dplyr::group_by(size) %>% 
+    dplyr::summarise(
+      p_anchor_1 = mean(return_anchor_1 > 0, na.rm = TRUE) * 100,
+      p_anchor_2 = mean(return_anchor_2 > 0, na.rm = TRUE) * 100,
+      p_avwap_ytd = mean(return_avwap_ytd > 0, na.rm = TRUE) * 100,
+      p_avwap_anchor_1 = mean(return_avwap_anchor_1 > 0, na.rm = TRUE) * 100,
+      p_avwap_anchor_2 = mean(return_avwap_anchor_2 > 0, na.rm = TRUE) * 100
+    ) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::mutate(
+      group = "all", 
+      sector = plyr::mapvalues(size, c("SML", "MID", "LRG"), c("SP600", "SP400", "SP500")), 
+      size = NULL
+    ) %>% 
+    dplyr::bind_rows(plot_df_a) %>% 
+    tidyr::pivot_longer(dplyr::starts_with("p"), names_to = "var", values_to = "p") 
+
+  # graph and combine
+  g1 <- graph_price_avwap_1(plot_df, "anchor_1", anchor_1_msg)
+  g2 <- graph_price_avwap_1(plot_df, "anchor_2", anchor_2_msg)
+  
+  
+  cowplot::plot_grid(
+    cowplot::plot_grid(
+      g1 + theme(legend.position = "none"),
+      g2 + theme(legend.position = "none"),
+      nrow = 2, align = 'vl'
+    ), 
+    cowplot::get_legend(g2),
+    nrow = 2, rel_heights = c(2, .2)
+  )
+}
+
+# misc
+graph_ytd_distribution <- function(stocks, etfs){
+  sp_percentiles <- stocks %>%
+    dplyr::filter(size == "LRG" & !is.na(return_ytd)) %>% 
+    dplyr::arrange(return_ytd) %>% 
+    dplyr::mutate(i = (1:dplyr::n()) / dplyr::n()) %>% 
+    dplyr::select(i, return_ytd)
+  
+  # label for spy
+  sp_avg <- etfs %>% 
+    dplyr::filter(ticker == "SPY") %>% 
+    dplyr::pull(return_ytd)
+  sp500 <- sp_percentiles %>% 
+    dplyr::mutate(diff = abs(return_ytd - sp_avg)) %>% 
+    dplyr::arrange(diff) %>% 
+    head(1) %>% 
+    dplyr::mutate(lab = paste0("SPY\n", sprintf("%.1f", sp_avg*100), "%"))
+  
+  # label for median
+  med <- sp_percentiles %>% 
+    dplyr::arrange(abs(i - 0.5)) %>% 
+    head(1) %>% 
+    dplyr::mutate(lab = paste0("Median\n", sprintf("%.1f", return_ytd*100), "%"))
+  
+  # label locations
+  y_loci <- sp_percentiles %>% 
+    dplyr::filter(dplyr::between(i, 0.97, 0.99)) %>% 
+    head(1) %>% dplyr::pull(return_ytd)
+  med_stagger <- if( abs(sp500$i - med$i) > 0.1 ) 1 else 2
+  
+  sp_percentiles %>% 
+    ggplot() +
+    geom_area(aes(i*100, return_ytd*100), color = "black", fill = "grey80") + 
+    geom_hline(yintercept = 0, color = "grey30") +
+    geom_vline(xintercept = 50, linetype = "dashed") +
+    geom_vline(data = sp500, aes(xintercept = i*100), linetype = "dashed") +
+    geom_label(data = sp500, aes(x = i*100, label = lab), y = y_loci*100, size = 5) +
+    geom_label(data = med, aes(x = i*100, label = lab), y = y_loci*100*med_stagger, size = 5) +
+    labs(x = "S&P Component Percentile (%)", y = "YTD Return (%)") + 
+    theme(
+      panel.grid.minor = element_blank()
+    )
+}
+
+graph_obos <- function(){
+  d_obos <- readr::read_csv("data/obos.csv")
+  
+  plot_data <- dplyr::bind_rows(
+    d_obos %>% 
+      dplyr::select(date = 1, ob = 5, os = 6) %>% 
+      tidyr::pivot_longer(-date) %>% 
+      dplyr::mutate(index = "SP500"),
+    d_obos %>% 
+      dplyr::select(1, ob = 11, os = 12) %>% 
+      tidyr::pivot_longer(-date) %>% 
+      dplyr::mutate(index = "R2000")
+  ) %>% 
+    dplyr::mutate(
+      name = ifelse(name == "ob", "Overbought", "Oversold"),
+      index = factor(index, c("SP500", "R2000"))
+    ) 
+  
+  mx_highlight <- plot_data %>% 
+    dplyr::group_by(name, index) %>% 
+    dplyr::summarise(mx = max(value, na.rm = TRUE))
+  
+  plot_data %>% 
+    ggplot() +
+    geom_hline(data = mx_highlight, aes(yintercept = mx*100), linetype = "dashed") +
+    geom_histogram(aes(date, value*100, fill = name, color = name), stat = "identity") +
+    geom_hline(yintercept = 0) +
+    facet_grid(name ~ index) +
+    scale_fill_manual(values = c("limegreen", "tomato")) +
+    scale_color_manual(values = c("darkgreen", "darkred")) +
+    labs(x = "", y = "% Overbought or Oversold") + 
+    theme(
+      legend.position = "none",
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank()
+    )
+}
+
+graph_gex <- function(){
+  use_n <- 21
+  
+  gex <- read.csv('https://squeezemetrics.com/monitor/static/DIX.csv') %>% 
+    dplyr::mutate(date = lubridate::as_date(date)) %>% 
+    tail(use_n)
+  
+  gex %>% 
+    ggplot() +
+    geom_tile(aes('a', use_n - as.numeric(date), fill = gex < 0), color = "black") +
+    geom_text(aes('a', use_n - as.numeric(date), label = format(date, "%b %d"))) +
+    scale_fill_manual(values = c("white", "lawngreen")) +
+    labs(x = "", y = "", subtitle = "Negative GEX Signals") +
+    theme_gray() + 
+    theme(
+      legend.position = "none",
+      panel.grid.major = element_blank(),
+      axis.ticks = element_blank(),
+      axis.text = element_blank(), 
+      aspect.ratio = 3
+    ) 
 }
 

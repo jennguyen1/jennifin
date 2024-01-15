@@ -67,24 +67,23 @@ shinyServer(function(input, output) {
 
 
   ## STOCKS ================================================================
-  
+
   # ta screen description
   observeEvent(input$show_ta_msg, {
     showModal(modalDialog(
       title = "TA Screening Process", 
       tags$ol(
         tags$li("In an uptrend defined by being above 50DMA, 200D MA, and 50D MA > 200D MA"), 
-        tags$li("At or above", anchor_msg, "price"),
+        tags$li("At or above", anchor_msg, "AVWAP"),
         tags$li("Outperformance relative to SPY (+/- 1%) over trailing month"),
         tags$li("Outperformance relative to corresponding sector (+/- 1%) over trailing month"),
-        tags$li("Increasing 200D SMA slope over past 2 weeks"),
-        tags$li("Bullish momentum regime with no oversold RSI14 reading in trailing 3 months"),
+        # tags$li("Bullish momentum regime with no oversold RSI14 reading in trailing 3 months"), # todo not doing this
         tags$li("Sort by proximity to 52-week highs")
       ),
       p("Follow up by examining the charts:"),
       tags$ul(
         tags$li("Price chart"),
-        tags$li("Price relative to SPY and relevant sector"),
+        tags$li("Relative price chart"),
         tags$li("RSI regime on a daily and weekly time frame"),
         tags$li("Support/resistance levels using AVWAP and Fibonacci")
       ),
@@ -128,6 +127,36 @@ shinyServer(function(input, output) {
     paste("Showing", length(sub_tickers), "stocks")
   })
   
+  output$download_ta_stocks <- downloadHandler(
+    filename = function() paste0("stock_list_", stringr::str_replace_all(Sys.Date(), "-", "_"), ".csv"),
+    content = function(file){
+      sub_tickers <- stocks %>%
+        filter_stocks(
+          sz = input$screen_stock_size, sct = input$screen_stock_sector, 
+          ta_scn = input$screen_stock_in_ta_screen, ta_lst = stocks_ta_screen$ticker
+        )
+      
+      stocks_ta_screen %>% 
+        dplyr::filter(ticker %in% sub_tickers) %>% 
+        purrr::set_names(
+          colnames(.) %>% 
+            stringr::str_to_title() %>% 
+            plyr::mapvalues(., 
+              c("Return_anchor_1", "Return_avwap_anchor_1", "Return_avwap_ytd", "Days_since_os", "Above_52w_low", "Below_52w_high"), 
+              c(paste(anchor_msg, "%"), paste(anchor_msg, "AVWAP %"), "YTD AVWAP %","Days Since OS", "Above 52W Low", "Below 52W High")
+            )
+        ) %>% 
+        readr::write_csv(file) 
+    }
+  )
+  
+  output$download_ta_stocks_ui <- renderUI({
+    req(input$screen_stock_in_ta_screen)
+    if(input$screen_stock_in_ta_screen){
+      downloadLink("download_ta_stocks", "Download")
+    }
+  })
+  
   # stock graph & tables
   output$graph_lead_lag_stock <- plotly::renderPlotly({
     sub_tickers <- stocks %>%
@@ -141,14 +170,11 @@ shinyServer(function(input, output) {
   output$tab_performance_stock <- DT::renderDT({
     sub_tickers <- stocks %>%
       filter_stocks(
-        sz = input$screen_stock_size, sct = input$screen_stock_sector, 
+        sz = input$screen_stock_size, sct = input$screen_stock_sector,
         ta_scn = input$screen_stock_in_ta_screen, ta_lst = stocks_ta_screen$ticker
       )
-    if(input$screen_stock_in_ta_screen){
-      tabulate_performance_stocks(stocks_ta_screen, sub_tickers)
-    } else{
-      tabulate_performance_stocks(stocks, sub_tickers)
-    }
+    
+    tabulate_performance_stocks(stocks, sub_tickers)
   })
   
   output$graph_stock_screen_hist <- plotly::renderPlotly({
@@ -219,198 +245,40 @@ shinyServer(function(input, output) {
       actionLink("show_ta_msg", "", icon = icon("circle-info")),
       uiOutput("select_stock_in_ta_screen"),
       hr(),
-      uiOutput("select_stock_msg")
+      uiOutput("select_stock_msg"),
+      uiOutput("download_ta_stocks_ui")
     )
   })
 
   
-  ## MISC ================================================================
+  ## GRAPHS ================================================================
   
   output$graph_ytd_distribution <- renderPlot({
-    
-    sp_percentiles <- stocks %>%
-      dplyr::filter(size == "LRG" & !is.na(return_ytd)) %>% 
-      dplyr::arrange(return_ytd) %>% 
-      dplyr::mutate(i = (1:dplyr::n()) / dplyr::n()) %>% 
-      dplyr::select(i, return_ytd)
-    
-    # label for spy
-    sp_avg <- etfs %>% 
-      dplyr::filter(ticker == "SPY") %>% 
-      dplyr::pull(return_ytd)
-    sp500 <- sp_percentiles %>% 
-      dplyr::mutate(diff = abs(return_ytd - sp_avg)) %>% 
-      dplyr::arrange(diff) %>% 
-      head(1) %>% 
-      dplyr::mutate(lab = paste0("SPY\n", sprintf("%.1f", sp_avg*100), "%"))
-    
-    # label for median
-    med <- sp_percentiles %>% 
-      dplyr::arrange(abs(i - 0.5)) %>% 
-      head(1) %>% 
-      dplyr::mutate(lab = paste0("Median\n", sprintf("%.1f", return_ytd*100), "%"))
-    
-    # label locations
-    y_loci <- sp_percentiles %>% 
-      dplyr::filter(dplyr::between(i, 0.97, 0.99)) %>% 
-      head(1) %>% dplyr::pull(return_ytd)
-    med_stagger <- if( abs(sp500$return_ytd - med$return_ytd) > 0.05 ) 1 else 2
-    
-    sp_percentiles %>% 
-      ggplot() +
-      geom_area(aes(i*100, return_ytd*100), color = "black", fill = "grey80") + 
-      geom_hline(yintercept = 0, color = "grey30") +
-      geom_vline(xintercept = 50, linetype = "dashed") +
-      geom_vline(data = sp500, aes(xintercept = i*100), linetype = "dashed") +
-      geom_label(data = sp500, aes(x = i*100, label = lab), y = y_loci*100, size = 5) +
-      geom_label(data = med, aes(x = i*100, label = lab), y = y_loci*100*med_stagger, size = 5) +
-      labs(x = "S&P Component Percentile (%)", y = "YTD Return (%)") + 
-      theme(
-        panel.grid.minor = element_blank()
-      )
+    graph_ytd_distribution(stocks, etfs)
   })
   
-  output$graph_ma_by_group <- renderPlot({
-    
-    grp <- stocks %>% 
-      dplyr::distinct(sector) %>% 
-      dplyr::arrange(sector) %>% 
-      dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
-    
-    df <- stocks %>% 
-      dplyr::left_join(grp, "sector") %>% 
-      dplyr::select(ticker, sector, group, dplyr::ends_with("d"), -dplyr::matches("ytd")) %>% 
-      dplyr::mutate(dplyr::across(dplyr::ends_with("d"), \(x) x > 0))
-    
-    sdf <- df %>% # all
-      dplyr::summarise(across(
-        dplyr::ends_with("d"),
-        \(x) mean(x, na.rm = TRUE)
-      )) %>% 
-      dplyr::mutate(group = "all")
-    
-    adf <- df %>% # by sector
-      dplyr::group_by(group) %>% 
-      dplyr::summarise(dplyr::across(
-        dplyr::ends_with("d"),
-        \(x) mean(x, na.rm = TRUE)
-      ))
-    
-    dplyr::bind_rows(sdf, adf) %>% 
-      tidyr::pivot_longer(-group) %>% 
-      dplyr::mutate(days = factor(readr::parse_number(name))) %>% 
-      ggplot(aes(days, value*100, group = group, color = group)) +
-      geom_line(linewidth = 1.5) +
-      geom_hline(yintercept = c(0, 100), color = "grey50") +
-      geom_hline(yintercept = 50, color = "grey50", linetype = "dashed") +
-      scale_y_continuous(breaks = seq(0, 100, 10)) + 
-      scale_color_manual(values = c("black", "limegreen", "tomato", "dodgerblue")) +
-      labs(x = "Moving Average", y = "% of Stocks Above", color = "") + 
-      theme(
-        legend.position = "top",
-        panel.grid.minor = element_blank(), 
-        panel.grid.major = element_blank()
-      )
+  output$graph_obos <- renderPlot({
+    graph_obos()
   })
   
-  output$graph_ma_by_sector <- renderPlot({
-    
-    grp <- stocks %>% 
-      dplyr::distinct(sector) %>% 
-      dplyr::arrange(sector) %>% 
-      dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
-    
-    df <- stocks %>% 
-      dplyr::left_join(grp, "sector") %>% 
-      dplyr::select(ticker, sector, group, size, ends_with("d")) %>% 
-      dplyr::mutate(dplyr::across(dplyr::ends_with("d"), \(x) x > 0))
-    
-    sdf <- df %>% # by size
-      dplyr::group_by(size) %>% 
-      dplyr::summarise(across(
-        dplyr::matches("\\dd$"),
-        \(x) mean(x, na.rm = TRUE)
-      )) %>% 
-      dplyr::mutate(group = "all") %>% 
-      dplyr::rename(sector = size)
-    
-    adf <- df %>% # by sector
-      dplyr::group_by(group, sector) %>% 
-      dplyr::summarise(dplyr::across(
-        dplyr::matches("\\dd$"),
-        \(x) mean(x, na.rm = TRUE)
-      ))
-    
-    plot_df <- dplyr::bind_rows(sdf, adf) %>% 
-      tidyr::pivot_longer(-c(group, sector)) %>% 
-      dplyr::mutate(
-        days = factor(readr::parse_number(name)),
-        sector = plyr::mapvalues(
-          sector, 
-          c("Consumer Staples", "Communication Services", "Consumer Discretionary"), 
-          c("Staples", "Communications", "Discretionary")
-        )
-      ) 
-    
-    plot_df %>% 
-      ggplot() +
-      geom_line(aes(days, value*100, group = sector, color = group), linewidth = 1.25) +
-      geom_text(data = plot_df %>% dplyr::filter(days == 200), aes(3.1, value*100, label = sector), hjust = 0) + 
-      geom_hline(yintercept = c(0, 100), color = "grey50") +
-      geom_hline(yintercept = 50, color = "grey50", linetype = "dashed") +
-      facet_grid(~group) + 
-      scale_y_continuous(breaks = seq(0, 100, 10)) + 
-      scale_color_manual(values = c("black", "limegreen", "tomato", "dodgerblue")) +
-      expand_limits(x = 4.75) +
-      labs(x = "Moving Average", y = "% of Stocks Above", color = "") + 
-      theme(
-        legend.position = "none",
-        panel.grid.minor = element_blank(),
-        panel.grid.major.x = element_blank()
-      )
-    
+  output$graph_gex <- renderPlot({
+    graph_gex()
   })
   
-  output$graph_uptrend_sector <- renderPlot({ # (1) >50d (2) >200d (3) 50d > 200d
-    
-    grp <- stocks %>% 
-      dplyr::distinct(sector) %>% 
-      dplyr::arrange(sector) %>% 
-      dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
-    
-    plot_df_a <- stocks %>% 
-      dplyr::left_join(grp, "sector") %>% 
-      dplyr::group_by(group, sector) %>% 
-      dplyr::summarise(p = mean(return_50d > 0 & return_200d > 0 & return_20d < return_50d & return_50d < return_200d, na.rm = TRUE)*100) %>% 
-      dplyr::ungroup() 
-    
-    plot_df <- stocks %>% 
-      dplyr::group_by(size) %>% 
-      dplyr::summarise(p = mean(return_50d > 0 & return_200d > 0 & return_20d < return_50d & return_50d < return_200d, na.rm = TRUE)*100) %>% 
-      dplyr::ungroup() %>% 
-      dplyr::mutate(
-        group = "all", 
-        sector = plyr::mapvalues(size, c("SML", "MID", "LRG"), c("SP600", "SP400", "SP500")), 
-        size = NULL
-      ) %>% 
-      dplyr::bind_rows(plot_df_a) %>% 
-      dplyr::mutate(sector = forcats::fct_reorder(sector, p))  
-    
-    plot_df %>% 
-      ggplot(aes(sector, p, fill = group)) +
-      geom_bar(stat = "identity", color = "black") +
-      scale_y_continuous(limits = c(0, 100)) +
-      scale_fill_manual(values = c("grey70", "limegreen", "tomato", "dodgerblue")) +
-      labs(x = "", y = "% in Uptrend") + 
-      coord_flip() +
-      theme(
-        legend.position = "none",
-        panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank()
-      )
+  output$graph_ma <- renderPlot({
+    cowplot::plot_grid(
+      graph_ma_by_sector(stocks),
+      graph_ma_uptrend_sector(stocks),
+      nrow = 2, rel_heights = c(1.25,1), 
+      align = 'v', axis = "l"
+    )
   })
   
-  output$graph_hilo_sector <- renderPlot({
+  output$graph_price_avwap <- renderPlot({ 
+    graph_price_avwap(stocks)
+  })
+  
+  output$graph_hilo_sector <- renderPlot({ 
     
     grp <- stocks %>% 
       dplyr::distinct(sector) %>% 
@@ -447,67 +315,6 @@ shinyServer(function(input, output) {
         panel.grid.minor = element_blank(),
         panel.grid.major.y = element_blank()
       )
-  })
-  
-  output$graph_obos <- renderPlot({
-    d_obos <- readr::read_csv("data/obos.csv")
-    
-    plot_data <- dplyr::bind_rows(
-      d_obos %>% 
-        dplyr::select(date = 1, ob = 5, os = 6) %>% 
-        tidyr::pivot_longer(-date) %>% 
-        dplyr::mutate(index = "SP500"),
-      d_obos %>% 
-        dplyr::select(1, ob = 11, os = 12) %>% 
-        tidyr::pivot_longer(-date) %>% 
-        dplyr::mutate(index = "R2000")
-    ) %>% 
-      dplyr::mutate(
-        name = ifelse(name == "ob", "Overbought", "Oversold"),
-        index = factor(index, c("SP500", "R2000"))
-      ) 
-    
-    mx_highlight <- plot_data %>% 
-      dplyr::group_by(name, index) %>% 
-      dplyr::summarise(mx = max(value, na.rm = TRUE))
-    
-    plot_data %>% 
-      ggplot() +
-      geom_hline(data = mx_highlight, aes(yintercept = mx*100), linetype = "dashed") +
-      geom_histogram(aes(date, value*100, fill = name, color = name), stat = "identity") +
-      geom_hline(yintercept = 0) +
-      facet_grid(name ~ index) +
-      scale_fill_manual(values = c("limegreen", "tomato")) +
-      scale_color_manual(values = c("darkgreen", "darkred")) +
-      labs(x = "", y = "% Overbought or Oversold") + 
-      theme(
-        legend.position = "none",
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank()
-      )
-  })
-  
-  output$graph_gex <- renderPlot({
-    use_n <- 21
-    
-    gex <- read.csv('https://squeezemetrics.com/monitor/static/DIX.csv') %>% 
-      dplyr::mutate(date = lubridate::as_date(date)) %>% 
-      tail(use_n)
-    
-    gex %>% 
-      ggplot() +
-      geom_tile(aes('a', use_n - as.numeric(date), fill = gex < 0), color = "black") +
-      geom_text(aes('a', use_n - as.numeric(date), label = format(date, "%b %d"))) +
-      scale_fill_manual(values = c("white", "lawngreen")) +
-      labs(x = "", y = "", subtitle = "Negative GEX Signals") +
-      theme_gray() + 
-      theme(
-        legend.position = "none",
-        panel.grid.major = element_blank(),
-        axis.ticks = element_blank(),
-        axis.text = element_blank(), 
-        aspect.ratio = 3
-      ) 
   })
   
 })

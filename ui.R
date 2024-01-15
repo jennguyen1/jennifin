@@ -41,21 +41,31 @@ sidebar <- dashboardSidebar(
 # content ---------------------------------------------
 main <- tabItem(
   tabName = "main",
-  verticalLayout(
-    box(
+  navbarPage(
+    "",
+    
+    tabPanel("Summary", box(
       width = NULL,
       solidHeader = TRUE, collapsible = FALSE,
-      div(DT::DTOutput("tab_performance_major"), style = "margin: 0 auto; max-width: 1000px"), 
+      div(DT::DTOutput("tab_performance_major"), style = "margin: 0 auto; max-width: 900px"),
       br()
-    )
-  ) 
-)
+    )), 
+    tabPanel("MA Breadth", box(
+      width = NULL,
+      div(plotOutput("graph_ma", height = "590px", width = "900px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 900px") 
+    )),
+    tabPanel("Swing High/Low Breadth", box(
+      width = NULL,
+      div(plotOutput("graph_price_avwap", height = "590px", width = "900px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 900px") 
+    )) 
+))
 
 # ETF view
 tab_etfs <- tabItem(
   tabName = "etfs",
   navbarPage(
     "Screen ETFs",
+    
     tabPanel("Select Tickers", box(
       width = NULL,
       div(DT::DTOutput("tab_select_etf"), style = "margin: 0 auto; max-width: 800px"),
@@ -90,7 +100,7 @@ tab_stocks <- tabItem(
     )),
     tabPanel("Performance", box(
       width = NULL,
-      div(DT::DTOutput("tab_performance_stock"), style = "margin: 0 auto; max-width: 950px")
+      div(DT::DTOutput("tab_performance_stock"), style = "margin: 0 auto; max-width: 900px")
     )),
     tabPanel("Screen History", box(
       width = NULL,
@@ -112,22 +122,6 @@ tab_misc <- tabItem(
       width = NULL,
       div(plotOutput("graph_ytd_distribution", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
     )),
-    tabPanel("Breadth by Group", box(
-      width = NULL,
-      div(plotOutput("graph_ma_by_group", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
-    )),
-    tabPanel("Breadth by Sector", box(
-      width = NULL,
-      div(plotOutput("graph_ma_by_sector", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
-    )),
-    tabPanel("Stocks in Uptrends", box(
-      width = NULL,
-      div(plotOutput("graph_uptrend_sector", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
-    )),    
-    tabPanel("52w High/Low by Sector", box(
-      width = NULL,
-      div(plotOutput("graph_hilo_sector", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
-    )),
     tabPanel("Overbought/Oversold", box(
       width = NULL,
       div(plotOutput("graph_obos", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
@@ -135,6 +129,11 @@ tab_misc <- tabItem(
     tabPanel("GEX", box(
       width = NULL, 
       plotOutput("graph_gex", height = "500px") %>% shinycssloaders::withSpinner(type = 7)
+    )),
+    
+    tabPanel("52w High/Low by Sector", box(
+      width = NULL,
+      div(plotOutput("graph_hilo_sector", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px")
     ))
 ))
 
