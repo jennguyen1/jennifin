@@ -142,9 +142,10 @@ shinyServer(function(input, output) {
             stringr::str_to_title() %>% 
             plyr::mapvalues(., 
               c("Return_anchor_1", "Return_avwap_anchor_1", "Return_avwap_ytd", "Days_since_os", "Above_52w_low", "Below_52w_high"), 
-              c(paste(anchor_msg, "%"), paste(anchor_msg, "AVWAP %"), "YTD AVWAP %","Days Since OS", "Above 52W Low", "Below 52W High")
+              c(paste(anchor_msg, "%"), paste(anchor_msg, "AVWAP %"), "YTD AVWAP %","Days Since OS", "% Above 52W Low", "% Below 52W High")
             )
         ) %>% 
+        dplyr::mutate_at(dplyr::vars(dplyr::matches("%")), ~ round(.x*100, 1)) %>% 
         readr::write_csv(file) 
     }
   )
