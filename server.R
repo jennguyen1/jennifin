@@ -77,7 +77,6 @@ shinyServer(function(input, output) {
         tags$li("At or above", anchor_msg, "AVWAP"),
         tags$li("Outperformance relative to SPY (+/- 1%) over trailing month"),
         tags$li("Outperformance relative to corresponding sector (+/- 1%) over trailing month"),
-        # tags$li("Bullish momentum regime with no oversold RSI14 reading in trailing 3 months"), # todo not doing this
         tags$li("Sort by proximity to 52-week highs")
       ),
       p("Follow up by examining the charts:"),
