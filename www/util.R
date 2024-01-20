@@ -438,7 +438,7 @@ graph_ma_uptrend_sector <- function(dat){ # (1) >50d (2) >200d (3) 50d > 200d
   plot_df %>% 
     ggplot(aes(sector, p, fill = group)) +
     geom_bar(stat = "identity", color = "black") +
-    scale_y_continuous(limits = c(0, 100)) +
+    scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 10)) +
     scale_fill_manual(values = c("grey70", "limegreen", "tomato", "dodgerblue")) +
     labs(x = "", y = "% in Uptrend", caption = "(1) > 50DMA, (2) >200DMA, (3) 50DMA > 200DMA") + 
     coord_flip() +
@@ -468,7 +468,7 @@ graph_price_avwap_1 <- function(dat, anchor, anchor_label){
     geom_point(aes(shape = var), size = 3, stroke = 1) + 
     geom_line(size = 1, alpha = 0.5) + 
     facet_grid(~label) +
-    scale_y_continuous(limits = c(0, 100)) +
+    scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 10)) +
     scale_shape_manual(values = c(2, 1)) + 
     scale_color_manual(values = c("grey50", "limegreen", "tomato", "dodgerblue")) +
     guides(color = FALSE) +
