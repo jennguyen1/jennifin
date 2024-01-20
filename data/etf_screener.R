@@ -56,7 +56,11 @@ collect_ma_breadth_stats(stocks = s)
 # tidyquant::tq_index("SP600") %>% readr::write_csv("~/Downloads/sc.csv")
 
 # pull data from stockcharts - get sector & industry
-# [
-#   [group is SP500] OR [group is SP400] OR [group is SP600]
-# ]
+# [group is SP500] OR [group is SP400] OR [group is SP600]
+
+# other stocks not in SP1500
+# [type is stock] AND [group is not etf] AND
+# [group is not SP500] AND [group is not SP400] AND [group is not SP600] AND 
+# [[exchange is NYSE  ] OR [exchange is NASDAQ]] AND
+# [ market cap > 1000 ] 
 
