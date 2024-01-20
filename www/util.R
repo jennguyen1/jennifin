@@ -640,3 +640,19 @@ graph_gex <- function(){
     ) 
 }
 
+graph_anchor_scatter <- function(dat, color_var){
+  dat %>% 
+    ggplot(aes(return_anchor_1*100, return_anchor_2*100, label = ticker, color = {{color_var}})) +
+    geom_hline(yintercept = 0, color = "grey40") +
+    geom_vline(xintercept = 0, color = "grey40") +
+    geom_abline(intercept = 0, slope = 1, color = "grey40") +
+    geom_text() +
+    labs(
+      x = paste0(anchor_1_msg, " (%)"),
+      y = paste0(anchor_2_msg, " (%)")
+    ) + 
+    theme(
+      panel.grid.major = element_blank()
+    )
+}
+
