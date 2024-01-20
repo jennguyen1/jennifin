@@ -1,46 +1,72 @@
+source('www/util_init.R')
+source('www/util.R')
+
+
+# avwap updates ----------------------------------------------------------
+
+file <- "12Tv_-fBoLMc1hcyTWw5jEzd_z3P5Q-uhjHp12j1WlTo"
+df <- googlesheets4::read_sheet(file, "Watchlist")
+
+dates <- data.frame(label = "t", date = "2024-01-02")
+
+ndf <- df %>% 
+  dplyr::mutate(
+    a = purrr::map(Ticker, ~ get_avwap_series(.x, dates))
+  ) %>% 
+  select(Ticker, Price, a) 
+
+odf <- ndf %>% 
+  mutate(avwap = purrr::map_dbl(a, function(d) if(nrow(d) == 0) NA else d[1,1,drop=TRUE])) %>% 
+  select(Ticker, avwap)
+
+assertthat::assert_that(nrow(df) == nrow(odf))
+googlesheets4::write_sheet(odf, file, 'add_avwaps')
+
 
 # etf screen -------------------------------------------------------------------
+graph_ma_by_group(stocks)
+
+plotly::ggplotly(
+  etfs %>% 
+    dplyr::filter(type %in% c("major", "factor", "sector")) %>% 
+    graph_anchor_scatter(category)
+)
+
 spy_1m <- dplyr::filter(etfs, ticker == "SPY")$return_1m
-
-etfs %>% 
-  dplyr::filter(return_200d > 0) %>%  
-  dplyr::filter(return_anchor_1 >= 0) %>% 
+etf_f <- etfs %>% 
+  dplyr::filter(return_50d > 0 & return_200d > 0 & return_50d < return_200d) %>% 
+  dplyr::filter(return_avwap_anchor_1 >= 0) %>% 
   dplyr::filter(return_1m > spy_1m) %>% 
-  dplyr::mutate(
-    sma200_slope = purrr::map_dbl(ticker, get_sma_slope),
-    rsi = purrr::map(ticker, get_rsi_stats)
-  ) %>% 
+  dplyr::mutate(rsi = purrr::map(ticker, get_rsi_stats)) %>%
   tidyr::unnest(rsi) %>% 
-  dplyr::filter(sma200_slope > 0) %>% # keep if 200d SMA slope positive over past 2 weeks
-  dplyr::filter(days_since_os > 21*3) %>% # remove if oversold in the last 3m
-  dplyr::select(ticker, desc, type, category, category2, return_200d, dplyr::matches("52"), days_since_os) %>% 
-  dplyr::arrange(dplyr::desc(below_52w_high)) %>% View()
-
-
-# international ----------------------------------------------------------------
-(id <- googlesheets4::read_sheet("1ClO1wnq-02ImJYbiLV1H3nnjDXWMP5mjN0TuTcOqDRE"))
-
-id %>% 
-  dplyr::mutate(
-    return_200d = pdiff(price, price_200d),
-    above_52w_low = pdiff(price, price_52w_lo),
-    below_52w_high = pdiff(price, price_52w_hi),
-    return_1m = pdiff(price, price_1m),
-    return_anchor_lo = pdiff(price, price_anchor_lo),
-    return_anchor_hi = pdiff(price, price_anchor_hi)
-  ) %>%  
-  dplyr::filter(return_200d > 0) %>%  
-  dplyr::filter(return_anchor_hi >= 0) %>% 
-  dplyr::filter(return_1m > spy_1m) %>% 
-  dplyr::mutate(
-    sma200_slope = purrr::map_dbl(ticker, get_sma_slope),
-    rsi = purrr::map(ticker, get_rsi_stats)
+  dplyr::select(
+    ticker, desc, type, category, category2, 
+    return_anchor_1, return_avwap_anchor_1,
+    return_anchor_2, return_avwap_anchor_2,
+    days_since_os, 
+    dplyr::matches("52")
   ) %>% 
-  tidyr::unnest(rsi) %>% 
-  dplyr::filter(sma200_slope > 0) %>% # keep if 200d SMA slope positive over past 2 weeks
-  dplyr::filter(days_since_os > 21*3) %>% # remove if oversold in the last 3m
-  dplyr::select(ticker, dplyr::one_of(c("company", "sector", "size")), return_200d, dplyr::matches("52"), days_since_os) %>% 
-  dplyr::arrange(dplyr::desc(below_52w_high)) %>% View()
+  dplyr::arrange(dplyr::desc(below_52w_high)) 
+
+etf_f %>% View()
+
+
+# other stocks ----------------------------------------------------------------
+(os <- googlesheets4::read_sheet("10oKFDmMz0UY78I4ARn2JKblJsajIcw2Eda3O-Afqpxs"))
+os_clean <- clean_data_stocks(os)
+scan2 <- apply_technical_screen(os_clean)
+
+plotly::ggplotly(
+  os %>% 
+    subset(ticker %in% scan2$ticker) %>% 
+    graph_anchor_scatter(sector)
+)
+
+plotly::ggplotly(
+  stocks %>% 
+    subset(ticker %in% stocks_ta_screen$ticker) %>% 
+    graph_anchor_scatter(sector)
+)
 
 
 # gex proof of concept ---------------------------------------------------------
@@ -74,7 +100,6 @@ ggplot() +
 
 
 # 50d 200d trend ---------------------------------------------------------------
-# 50d 200d 
 plot_data <- readr::read_csv("data/stats_ma_50d_gr_200d.csv") %>% 
   dplyr::mutate(
     hazy = ifelse(date < lubridate::ymd("2023-03-31"), '1', '2')
@@ -97,3 +122,5 @@ plot_data %>%
     panel.grid.minor = element_blank(),
     panel.grid.major = element_blank()
   )
+
+
