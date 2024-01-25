@@ -15,7 +15,7 @@ header <- dashboardHeader(
   title = "jennifin",
   dropdownMenu(
     type = "notifications", 
-    icon = paste("Updated ", get_file_update_dt()),
+    icon = paste("Updated as of Market Close", get_file_update_dt()),
     headerText = "",
     badgeStatus = NULL
   )
@@ -76,6 +76,10 @@ tab_etfs <- tabItem(
       width = NULL, 
       div(plotly::plotlyOutput("graph_lead_lag_etf", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
     )),
+    tabPanel("Returns from Key Dates", box(
+      width = NULL, 
+      div(plotly::plotlyOutput("graph_scatter_etf", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
+    )),
     tabPanel("Performance", box(
       width = NULL, 
       div(DT::DTOutput("tab_performance_etf"), style = "margin: 0 auto; max-width: 1000px")
@@ -97,10 +101,6 @@ tab_stocks <- tabItem(
         ),
         uiOutput("stocks_display") %>% shinycssloaders::withSpinner(type = 7)
       )
-    )),
-    tabPanel("Performance", box(
-      width = NULL,
-      div(DT::DTOutput("tab_performance_stock"), style = "margin: 0 auto; max-width: 900px")
     )),
     tabPanel("Screen History", box(
       width = NULL,

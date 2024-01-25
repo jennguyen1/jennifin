@@ -1,10 +1,5 @@
 
-## some date stuff ##
-
-anchor_1_msg <- "Jul High" # note this may change
-anchor_2_msg <- "Oct Low" # note this may change
-anchor_msg <- anchor_1_msg # note this may change
-
+source('www/util_init.R')
 
 ### general functions ###
 calculate_perc_above <- function(dat, val){
@@ -126,13 +121,13 @@ graph_lead_lag <- function(dat, sub = NULL, ...){
   
   graph_data <- graph_data0 %>% 
     dplyr::mutate(
-      above_52w_low = round(above_52w_low*100, 1),
-      below_52w_high = round(below_52w_high*100, 1)
+      return_above_52w_lo = round(return_above_52w_lo*100, 1),
+      return_below_52w_hi = round(return_below_52w_hi*100, 1)
     )
   
   # scales
-  xmax <- ceiling( max(graph_data$above_52w_low, na.rm = TRUE) / 10 ) * 10 + 10
-  ymin <- floor( min(graph_data$below_52w_high, na.rm = TRUE) / 10 ) * 10 - 5
+  xmax <- ceiling( max(graph_data$return_above_52w_lo, na.rm = TRUE) / 10 ) * 10 + 10
+  ymin <- floor( min(graph_data$return_below_52w_hi, na.rm = TRUE) / 10 ) * 10 - 5
   
   # shading region
   fill_green <- data.frame(x = seq(0, xmax, 5)) %>% dplyr::mutate(y = 0 - 0.25*x)
@@ -147,9 +142,9 @@ graph_lead_lag <- function(dat, sub = NULL, ...){
     geom_vline(xintercept = 0, color = "grey80")
   
   g <- if( is.null(col) ){
-    g + geom_text(aes(above_52w_low, below_52w_high, label = ticker)) 
+    g + geom_text(aes(return_above_52w_lo, return_below_52w_hi, label = ticker)) 
   } else{
-    g + geom_text(aes(above_52w_low, below_52w_high, label = ticker, ...))
+    g + geom_text(aes(return_above_52w_lo, return_below_52w_hi, label = ticker, ...))
   }
   
   g +
@@ -174,7 +169,7 @@ tabulate_performance_etfs <- function(dat, sub = NULL){
   tab_data <- tab_data0 %>% 
     dplyr::select(
       ticker, desc, 
-      dplyr::matches("\\d[my]$"), dplyr::ends_with("ytd"),
+      dplyr::matches("\\d+m$"), return_ytd, return_avwap_ytd,
       dplyr::ends_with("50d"), dplyr::ends_with("200d"), 
       dplyr::matches("52w")
     )
@@ -189,13 +184,13 @@ tabulate_performance_etfs <- function(dat, sub = NULL){
       "1M %" = "return_1m",
       "3M %" = "return_3m",
       "6M %" = "return_6m",
-      "1Y %" = "return_1y", 
+      "1Y %" = "return_12m", 
       "YTD %" = "return_ytd", 
       "YTD AVWAP %" = "return_avwap_ytd",
       "50D %" = "return_50d",
       "200D %" = "return_200d",
-      'Above 52W Low' = 'above_52w_low',
-      "Below 52W High" = "below_52w_high"
+      'Above 52W Low' = 'return_above_52w_lo',
+      "Below 52W High" = "return_below_52w_hi"
     ),  
     class = 'cell-border compact hover',
     filter = 'bottom',
@@ -212,50 +207,6 @@ tabulate_performance_etfs <- function(dat, sub = NULL){
     DT::formatStyle(1, fontWeight = "bold") %>% 
     DT::formatStyle(c(3:ncol(tab_data)), color = DT::styleInterval(0, c("red", "green"))) %>% 
     DT::formatStyle(c(3:ncol(tab_data)), color = DT::styleEqual(0, "black")) 
-}
-
-tabulate_performance_stocks <- function(dat, sub = NULL){
-  tab_data0 <- if( is.null(sub) | length(sub) == 0 ){
-    dat
-  } else{
-    dplyr::filter(dat, ticker %in% sub)
-  }
-  
-  tab_data <- tab_data0 %>% 
-    dplyr::mutate_at(dplyr::vars(sector, industry, size), factor) %>% 
-    dplyr::select(ticker, company, sector, industry, size, return_50d, return_200d, dplyr::matches("52w")) 
-
-  # tabulate
-  DT::datatable(
-    tab_data,
-    rownames = FALSE,
-    colnames = c(
-      "Ticker" = "ticker", 
-      "Company" = "company",
-      "Sector" = "sector", 
-      "Industry" = "industry",
-      "Size" = "size",
-      "50D %" = "return_50d",
-      "200D %" = "return_200d",
-      'Above 52W Low' = 'above_52w_low',
-      "Below 52W High" = "below_52w_high"
-    ),  
-    class = 'cell-border compact hover',
-    filter = list(position = 'top', clear = FALSE),
-    select = 'none', 
-    options = list(
-      dom = 'tri', # table display 
-      order = list(list(8, 'desc')), # default order based on 52w high
-      columnDefs = list(list(className = 'dt-center', targets = 4)),
-      pageLength = nrow(tab_data), # minimal scrolling
-      scrollX = TRUE, scrollY = 341
-    )
-  ) %>% 
-    # formatting
-    DT::formatPercentage(6:ncol(tab_data), digits = 1) %>% 
-    DT::formatStyle(1, fontWeight = "bold") %>% 
-    DT::formatStyle(6:ncol(tab_data), color = DT::styleInterval(0, c("red", "green"))) %>% 
-    DT::formatStyle(6:ncol(tab_data), color = DT::styleEqual(0, "black"))
 }
 
 display_table_summary <- function(etfs, stocks){
@@ -579,34 +530,30 @@ graph_ytd_distribution <- function(stocks, etfs){
     )
 }
 
-graph_obos <- function(){
-  d_obos <- readr::read_csv("data/obos.csv")
+graph_obos_1 <- function(dat, dt){
+  dat %>%
+    dplyr::filter(date == dt) %>%
+    dplyr::group_by(date) %>%
+    dplyr::summarise(
+      Overbought = mean(rsi >= 70, na.rm = TRUE),
+      Oversold = mean(rsi <= 30, na.rm = TRUE)
+    )
+}
+
+graph_obos <- function(dat){
+  dates <- dat %>%
+    distinct(date) %>%
+    subset(year(date) >= year(today)-2 & wday(date) == 6) %>%
+    pull(date)
   
-  plot_data <- dplyr::bind_rows(
-    d_obos %>% 
-      dplyr::select(date = 1, ob = 5, os = 6) %>% 
-      tidyr::pivot_longer(-date) %>% 
-      dplyr::mutate(index = "SP500"),
-    d_obos %>% 
-      dplyr::select(1, ob = 11, os = 12) %>% 
-      tidyr::pivot_longer(-date) %>% 
-      dplyr::mutate(index = "R2000")
-  ) %>% 
-    dplyr::mutate(
-      name = ifelse(name == "ob", "Overbought", "Oversold"),
-      index = factor(index, c("SP500", "R2000"))
-    ) 
-  
-  mx_highlight <- plot_data %>% 
-    dplyr::group_by(name, index) %>% 
-    dplyr::summarise(mx = max(value, na.rm = TRUE))
+  plot_data <- purrr::map_dfr(dates, ~ graph_obos_1(s, .x)) %>% 
+    tidyr::pivot_longer(-date)
   
   plot_data %>% 
     ggplot() +
-    geom_hline(data = mx_highlight, aes(yintercept = mx*100), linetype = "dashed") +
-    geom_histogram(aes(date, value*100, fill = name, color = name), stat = "identity") +
     geom_hline(yintercept = 0) +
-    facet_grid(name ~ index) +
+    geom_histogram(aes(date, value*100, fill = name, color = name), stat = "identity") +
+    facet_grid(name ~ .) +
     scale_fill_manual(values = c("limegreen", "tomato")) +
     scale_color_manual(values = c("darkgreen", "darkred")) +
     labs(x = "", y = "% Overbought or Oversold") + 
@@ -640,13 +587,16 @@ graph_gex <- function(){
     ) 
 }
 
-graph_anchor_scatter <- function(dat, color_var){
+graph_anchor_scatter <- function(dat, color){
+  
   dat %>% 
-    ggplot(aes(return_anchor_1*100, return_anchor_2*100, label = ticker, color = {{color_var}})) +
+    ggplot(aes(return_anchor_1*100, return_anchor_2*100, label = ticker, color = {{color}})) +
     geom_hline(yintercept = 0, color = "grey40") +
     geom_vline(xintercept = 0, color = "grey40") +
     geom_abline(intercept = 0, slope = 1, color = "grey40") +
     geom_text() +
+    scale_x_continuous(breaks = seq(-100, 100, 10)) + 
+    scale_y_continuous(breaks = seq(-100, 100, 10)) + 
     labs(
       x = paste0(anchor_1_msg, " (%)"),
       y = paste0(anchor_2_msg, " (%)")

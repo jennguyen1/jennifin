@@ -1,52 +1,26 @@
-library(googlesheets4)
+
 library(tidyverse)
 source("www/util_init.R")
-file <- "1kOpm7h3UqQ1Onen3woMDu__-4j5on0Cdd2ZgvBuMxSM"
-# file <- "13YIcVeQ00nbRRA0arjYiV8FpE_4MiA7LkhF4sTz8mJw" # backup
-obos_file <- "1O-pGX8btHlySCU7MuwU3yFvZcYq21nzfLC_CygSDRbY"
 
-### Run Before Each Session - Refresh Prices ###
+Sys.time() # typically 10-15 min
+e <- readr::read_csv("data/tickers_etf.csv") %>% 
+  query_ticker_data() %>% 
+  create_ta_columns()
+s <- readr::read_csv("data/tickers_stock.csv") %>% 
+  query_ticker_data() %>% 
+  create_ta_columns()
+Sys.time()
 
+etfs <- clean_data(e, desc, type, category, category2)
+stocks <- clean_data(s, company, sector, industry, size)
+stocks_ta_screen <- apply_technical_screen(stocks, etfs)
 
-# ETFs
-(e <- googlesheets4::read_sheet(file, "ETFs") %>% clean_data_etfs())
-
-readr::write_csv(e, "data/etfs.csv")
-
-
-# Stocks
-(s500 <- googlesheets4::read_sheet(file, "SP500") )
-(s400 <- googlesheets4::read_sheet(file, "SP400") )
-(s600 <- googlesheets4::read_sheet(file, "SP600") )
-s <- dplyr::bind_rows(s500, s400, s600) %>% clean_data_stocks() 
-s_ta <- apply_technical_screen(s, e)
-
-readr::write_csv(s, "data/stocks.csv")
-readr::write_csv(s_ta, "data/stocks_ta_screen.csv")
-
-# file write info
-write_file_update <- function(){
-  dt <- file.info( c("data/etfs.csv", "data/stocks.csv") ) %>% 
-    dplyr::pull(mtime) %>% 
-    min() 
-  
-  date <- stringr::str_extract(dt, "\\d{4}-\\d{2}-\\d{2}")
-  time <- format(dt, "%H:%M:%S") %>% 
-    strptime(format = "%H:%M:%S") %>% 
-    format("%I:%M%p")
-  timezone <- format(dt, "%Z")
-  
-  paste(date, time, "EST") %>% 
-    readr::write_lines("data/read_time.txt")
-}
-write_file_update()
-
-d_obos <- googlesheets4::read_sheet(obos_file)
-readr::write_csv(d_obos, "data/obos.csv")
+# save output
+save(e, s, file = "data/data0.RData")
+save(etfs, stocks, stocks_ta_screen, file = "data/data.RData")
 
 # data collection
-collect_ta_stats(stocks = s, stocks_ta = s_ta)
-collect_ma_breadth_stats(stocks = s)
+collect_ta_stats(stocks = stocks, stocks_ta = stocks_ta_screen)
 
 
 ### Every Quarter - SP Companies ###

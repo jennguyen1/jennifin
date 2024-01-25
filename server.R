@@ -64,6 +64,19 @@ shinyServer(function(input, output) {
     sub_tickers <- etfs$ticker[input$tab_select_etf_rows_selected]
     tabulate_performance_etfs(etfs, sub = sub_tickers)
   })
+  
+  output$graph_scatter_etf <- plotly::renderPlotly({
+    sub_tickers <- etfs$ticker[input$tab_select_etf_rows_selected]
+    if(length(sub_tickers) == 0){
+      sub_tickers <- etfs$ticker
+    }
+    
+    plotly::ggplotly(
+      etfs %>% 
+        dplyr::filter(ticker %in% sub_tickers) %>% 
+        graph_anchor_scatter(color = category)
+    )
+  })
 
 
   ## STOCKS ================================================================
@@ -141,7 +154,7 @@ shinyServer(function(input, output) {
           colnames(.) %>% 
             stringr::str_to_title() %>% 
             plyr::mapvalues(., 
-              c("Return_anchor_1", "Return_avwap_anchor_1", "Return_avwap_ytd", "Days_since_os", "Above_52w_low", "Below_52w_high"), 
+              c("Return_anchor_1", "Return_avwap_anchor_1", "Return_avwap_ytd", "Days_since_os", "Return_above_52w_lo", "Return_below_52w_hi"), 
               c(paste(anchor_msg, "%"), paste(anchor_msg, "AVWAP %"), "YTD AVWAP %","Days Since OS", "% Above 52W Low", "% Below 52W High")
             )
         ) %>% 
@@ -258,7 +271,7 @@ shinyServer(function(input, output) {
   })
   
   output$graph_obos <- renderPlot({
-    graph_obos()
+    graph_obos(s)
   })
   
   output$graph_gex <- renderPlot({
@@ -288,12 +301,12 @@ shinyServer(function(input, output) {
     plot_df_a <- stocks %>% 
       dplyr::left_join(grp, "sector") %>% 
       dplyr::group_by(group, sector) %>% 
-      dplyr::summarise(p = mean(abs(below_52w_high) < abs(above_52w_low), na.rm = TRUE)*100) %>% 
+      dplyr::summarise(p = mean(abs(return_below_52w_hi) < abs(return_above_52w_lo), na.rm = TRUE)*100) %>% 
       dplyr::ungroup() 
     
     plot_df <- stocks %>% 
       dplyr::group_by(size) %>% 
-      dplyr::summarise(p = mean(abs(below_52w_high) < abs(above_52w_low), na.rm = TRUE)*100) %>% 
+      dplyr::summarise(p = mean(abs(return_below_52w_hi) < abs(return_above_52w_lo), na.rm = TRUE)*100) %>% 
       dplyr::ungroup() %>% 
       dplyr::mutate(
         group = "all", 

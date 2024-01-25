@@ -1,13 +1,21 @@
 options(readr.show_col_types = FALSE)
 
+
 ## some date stuff ##
 
 today <- Sys.Date()
 year_start <- "2024-01-02"
 
+# note this may change
+anchor_1 <- "2023-07-31"
+anchor_2 <- "2023-10-27"
+anchor_1_msg <- "Jul High"
+anchor_2_msg <- "Oct Low"
+anchor_msg <- anchor_1_msg
+
 
 ### general functions ###
-pdiff <- function(x, base) round((x-base)/base, 3)
+pdiff <- function(x, base) round((x-base)/base, 3) 
 
 clean_ticker <- function(ticker){
   plyr::mapvalues(
@@ -18,66 +26,25 @@ clean_ticker <- function(ticker){
   )
 }
 
-calc_rsi_14 <- function(ticker, i = 1:252){
-  use_ticker <- clean_ticker(ticker)
+price_on_date <- function(dat, dt, type = "close"){
+  val <- dat %>% 
+    dplyr::filter(date >=  dt) %>% 
+    head(1) %>% 
+    .[ , type, drop = TRUE]
   
-  tryCatch({
-    tidyquant::tq_get(use_ticker, from = today - 252*2) %>% 
-      dplyr::mutate(rsi = TTR::RSI(close, n = 14)) %>% 
-      dplyr::arrange(dplyr::desc(date)) %>% 
-      dplyr::select(date, rsi) %>% 
-      head(252) %>% 
-      dplyr::slice(i) %>% 
-      dplyr::pull(rsi) 
-  }, error = function(e) NA
-  )
+  ifelse(length(val) == 0, NA, val)
 }
 
-get_rsi_stats <- function(ticker){
-  rsi <- calc_rsi_14(ticker)
-  data.frame(
-    rsi = rsi[1],
-    rsi2 = rsi[10], # todo
-    days_since_os = dplyr::coalesce(which(rsi < 30)[1] - 1, 252),
-    days_since_ob = dplyr::coalesce(which(rsi > 70)[1] - 1, 252)
-  )
-}
-
-get_sma_slope <- function(ticker, n = 200){
-  use_ticker <- clean_ticker(ticker)
-  
-  tryCatch({
-    sma <- tidyquant::tq_get(use_ticker, from = today - 756) %>%
-      dplyr::mutate(sma = TTR::SMA(close, n = n)) %>%
-      tail(11) %>% 
-      dplyr::pull(sma)
-    
-    b4 <- head(sma, 1)
-    af <- tail(sma, 1)
-    (af - b4) / 10 / b4 * 100
-  }, error = function(e) NA
-  )
-}
-
-get_sma_slope_direction <- function(ticker, n = 200){
-  slope <- get_sma_slope(ticker, n)
-  
-  dplyr::case_when(
-    slope > 0.01 ~ "+", 
-    slope < -0.01 ~ "-",
-    TRUE ~ "0"
-  )
-}
-
-# avwap
-get_ticker_data <- function(ticker, df_dates){
-  use_ticker <- clean_ticker(ticker)
-  use_date <- min(as.Date(df_dates))
-  tidyquant::tq_get(use_ticker, from = use_date) 
-}
-
-calculate_avwap <- function(dat){
+price_on_ytd <- function(dat){
   dat %>% 
+    dplyr::filter(year(date) < year(today)) %>%  
+    tail(1) %>% 
+    dplyr::pull(close)
+}
+
+calculate_avwap <- function(dat, dt){
+  dat %>% 
+    dplyr::filter(date >= dt) %>% 
     dplyr::mutate(
       price = (open+high+low+close)/4, 
       num = cumsum(price * volume),
@@ -88,106 +55,103 @@ calculate_avwap <- function(dat){
     tail(1)
 }
 
-get_avwap_series <- function(ticker, df_dates){
-  tryCatch({
-    df <- get_ticker_data(ticker, df_dates$date)
-    df_dates %>% 
-      dplyr::mutate(
-        avwap = purrr::map_dbl(date, function(dt){
-          df %>% 
-            dplyr::filter(date >= dt) %>% 
-            calculate_avwap()
+get_rsi_stats <- function(dat){
+
+  rsi <- dat %>% 
+    dplyr::arrange(dplyr::desc(date)) %>% 
+    dplyr::select(date, rsi) %>% 
+    dplyr::pull(rsi) 
+  
+  data.frame(
+    rsi = rsi[1],
+    days_since_os = dplyr::coalesce(which(rsi < 30)[1] - 1, 252),
+    days_since_ob = dplyr::coalesce(which(rsi > 70)[1] - 1, 252)
+  )
+}
+
+
+### data creation ###
+query_ticker_data <- function(dat){
+  
+  d0 <- dat$ticker %>% 
+    clean_ticker() %>% 
+    tidyquant::tq_get(from = "2020-01-01") %>% 
+    dplyr::rename(ticker = symbol)
+  
+  dplyr::full_join(dat, d0, "ticker")
+}
+
+create_ta_columns <- function(dat){
+  dat %>% 
+    tidyr::nest(data = -ticker) %>% 
+    dplyr::mutate(
+      data = purrr::map(data, function(d){
+        tryCatch({
+          d %>% 
+            dplyr::mutate(
+              rsi = TTR::RSI(close, n = 14),
+              ma_20 = TTR::SMA(close, 20),
+              ma_50 = TTR::SMA(close, 50),
+              ma_200 = TTR::SMA(close, 200)
+            )
+        }, error = function(e){
+          dplyr::mutate(d, rsi = NA, ma_20 = NA, ma_50 = NA, ma_200 = NA)
         })
-      ) %>% 
-      dplyr::select(label, avwap) %>% 
-      tidyr::pivot_wider(names_from = label, values_from = avwap)
-  }, error = function(e){
-    data.frame()
-  })
+      })
+    ) %>% 
+    tidyr::unnest(data)
 }
 
-
-### table creation ###
-
-clean_data_etfs <- function(dat){
+create_price_columns <- function(dat, anchor_1, anchor_2){
   
-  # for avwap
-  date1 <- as.character(purrr::discard(unique(dat$date_1), is.na))
-  date2 <- as.character(purrr::discard(unique(dat$date_2), is.na))
+  dat_sub_1y <- tail(dat, 252) # 1y
   
-  dates <- data.frame(
-    label = c("avwap_ytd", "avwap_anchor_1", "avwap_anchor_2"),
-    date = c(year_start, date1, date2)
-  )
-  
-  # cleaning
-  dat %>% 
-    dplyr::mutate(
-      avwaps = purrr::map(ticker, ~ get_avwap_series(.x, dates))
-    ) %>% 
-    tidyr::unnest(avwaps) %>% 
-    dplyr::mutate(
-      return_1m = pdiff(price, price_1m),
-      return_3m = pdiff(price, price_3m),
-      return_6m = pdiff(price, price_6m),
-      return_1y = pdiff(price, price_12m),
-      return_ytd = pdiff(price, price_year_start),
-      return_50d = pdiff(price, price_50d),
-      return_200d = pdiff(price, price_200d),
-      above_52w_low = pdiff(price, price_52w_lo),
-      below_52w_high = pdiff(price, price_52w_hi),
-      return_anchor_1 = pdiff(price, price_anchor_1),
-      return_anchor_2 = pdiff(price, price_anchor_2),
-      return_avwap_anchor_1 = pdiff(price, avwap_anchor_1),
-      return_avwap_anchor_2 = pdiff(price, avwap_anchor_2),
-      return_avwap_ytd = pdiff(price, avwap_ytd)
-    ) %>% 
-    dplyr::select(
-      -dplyr::starts_with("price"), 
-      -dplyr::starts_with("avwap"), 
-      -dplyr::starts_with("date")
+  out <- dat_sub_1y %>% 
+    dplyr::summarise(
+      price = tail(.$close, 1),
+      # hi/lo
+      price_above_52w_lo = min(low), 
+      price_below_52w_hi = max(high),
+      # ma
+      price_200d = tail(.$ma_200, 1), 
+      price_50d = tail(.$ma_50, 1), 
+      price_20d = tail(.$ma_20, 1), 
+      # price from date
+      price_1m = price_on_date(., today - days(31)),
+      price_3m = price_on_date(., today - days(91)),
+      price_6m = price_on_date(., today - days(181)),
+      price_12m = price_on_date(., today - days(366)),
+      price_ytd = price_on_ytd(.),
+      # price anchors
+      price_anchor_1 = price_on_date(dat, anchor_1), 
+      price_anchor_2 = price_on_date(dat, anchor_2), 
+      price_avwap_anchor_1 = calculate_avwap(dat, anchor_1),
+      price_avwap_anchor_2 = calculate_avwap(dat, anchor_2),
+      price_avwap_ytd = calculate_avwap(dat, year_start)
     )
+  
+  rsi <- get_rsi_stats(dat_sub_1y)
+  
+  # combine
+  dplyr::bind_cols(out, rsi)
 }
 
-clean_data_stocks <- function(dat){
+clean_data <- function(dat, ...){
   
-  # for avwap
-  date1 <- as.character(purrr::discard(unique(dat$date_1), is.na))
-  date2 <- as.character(purrr::discard(unique(dat$date_2), is.na))
-  
-  dates <- data.frame(
-    label = c("avwap_ytd", "avwap_anchor_1", "avwap_anchor_2"),
-    date = c(year_start, date1, date2)
-  )
-  
-  # cleaning
   dat %>% 
-    dplyr::mutate(
-      avwaps = purrr::map(ticker, ~ get_avwap_series(.x, dates))
-    ) %>% 
-    tidyr::unnest(avwaps) %>% 
-    dplyr::mutate(
-      return_20d = pdiff(price, price_20d),
-      return_50d = pdiff(price, price_50d),
-      return_200d = pdiff(price, price_200d),
-      above_52w_low = pdiff(price, price_52w_lo),
-      below_52w_high = pdiff(price, price_52w_hi),
-      return_1m = pdiff(price, price_1m),
-      return_ytd = pdiff(price, price_year_start),
-      return_anchor_1 = pdiff(price, price_anchor_1),
-      return_anchor_2 = pdiff(price, price_anchor_2),
-      return_avwap_anchor_1 = pdiff(price, avwap_anchor_1),
-      return_avwap_anchor_2 = pdiff(price, avwap_anchor_2),
-      return_avwap_ytd = pdiff(price, avwap_ytd)
-    ) %>% 
-    dplyr::select(
-      -dplyr::starts_with("price"), 
-      -dplyr::starts_with("avwap"), 
-      -dplyr::starts_with("date")
-    )
+    tidyr::nest(data = -c(ticker, ...)) %>% 
+    dplyr::mutate(res = purrr::map(data, create_price_columns, anchor_1 = anchor_1, anchor_2 = anchor_2)) %>% 
+    tidyr::unnest(res) %>% 
+    dplyr::select(-data) %>% 
+    dplyr::mutate(dplyr::across(
+      dplyr::starts_with("price_"), 
+      function(x) pdiff(price, x)
+    )) %>% 
+    purrr::set_names(colnames(.) %>% stringr::str_replace("price_", "return_"))
 }
 
 apply_technical_screen <- function(dat, etfs){
+  
   spy_1m <- dplyr::filter(etfs, ticker == "SPY")$return_1m
   
   sector_1m <- data.frame(
@@ -216,13 +180,8 @@ apply_technical_screen <- function(dat, etfs){
     dplyr::filter(return_1m - spy_1m > -0.01) %>% # remove laggards to SPY over last 1m
     dplyr::left_join(sector_1m, "sector", suffix = c("", "_sect")) %>% 
     dplyr::filter(return_1m - return_1m_sect > -0.01)
-    
-  # add rsi
-  d2 <- d1 %>%
-    dplyr::mutate(rsi = purrr::map(ticker, get_rsi_stats)) %>%
-    tidyr::unnest(rsi) 
   
-  d3 <- d2 %>%
+  d2 <- d1 %>%
     dplyr::select(
       ticker, 
       dplyr::one_of(c("company", "sector", "industry", "size")), 
@@ -232,9 +191,11 @@ apply_technical_screen <- function(dat, etfs){
     )
 
   # sort by 52w highs
-  d3 %>% dplyr::arrange(dplyr::desc(below_52w_high))
+  d2 %>% dplyr::arrange(dplyr::desc(return_below_52w_hi))
 }
 
+
+### data collection ### 
 collect_ta_stats <- function(stocks, stocks_ta){
   
   date <- as.Date(stringr::str_trim(readr::read_file("data/read_time.txt")))
@@ -259,20 +220,3 @@ collect_ta_stats <- function(stocks, stocks_ta){
     readr::write_csv(file)
 }
 
-collect_ma_breadth_stats <- function(stocks){
-  
-  date <- as.Date(stringr::str_trim(readr::read_file("data/read_time.txt")))
-  file <- "data/stats_ma_50d_gr_200d.csv"
-  prev_data <- readr::read_csv(file)
-  
-  # current week data
-  row_add <- stocks %>% 
-    dplyr::mutate(date = date) %>% 
-    dplyr::group_by(date, size) %>% # 50d SMA > 200d SMA (inversely correlated with return %)
-    dplyr::summarise(p = round(mean(return_50d < return_200d, na.rm = TRUE)*100, 1))
-  
-  # save
-  dplyr::bind_rows(prev_data, row_add) %>% 
-    dplyr::distinct() %>% 
-    readr::write_csv(file)
-}
