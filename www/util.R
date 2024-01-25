@@ -245,47 +245,63 @@ display_table_summary <- function(etfs, stocks){
 }
 
 # breadth by sector
-graph_ma_by_group <- function(dat){
+graph_ma_uptrend_by_group <- function(dat, past_years = 2){
   grp <- dat %>% 
     dplyr::distinct(sector) %>% 
     dplyr::arrange(sector) %>% 
     dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
   
   df <- dat %>% 
-    dplyr::left_join(grp, "sector") %>% 
-    dplyr::select(ticker, sector, group, dplyr::ends_with("d"), -dplyr::matches("ytd")) %>% 
-    dplyr::mutate(dplyr::across(dplyr::ends_with("d"), \(x) x > 0))
-  
-  sdf <- df %>% # all
-    dplyr::summarise(across(
-      dplyr::ends_with("d"),
-      \(x) mean(x, na.rm = TRUE)
-    )) %>% 
-    dplyr::mutate(group = "all")
-  
+    subset(year(date) >= (year(today)-past_years) & wday(date) %in% c(2,4,6)) %>%
+    dplyr::left_join(grp, "sector") 
+    
+  sdf <- df %>% # by size
+    dplyr::group_by(date, size) %>% 
+    dplyr::summarise(
+        p = mean(close > ma_50 & close > ma_200 & ma_50 > ma_200, na.rm = TRUE)
+      ) %>% 
+    dplyr::mutate(type = "By Size", group = size)
+
   adf <- df %>% # by sector
-    dplyr::group_by(group) %>% 
-    dplyr::summarise(dplyr::across(
-      dplyr::ends_with("d"),
-      \(x) mean(x, na.rm = TRUE)
-    ))
-  
-  dplyr::bind_rows(sdf, adf) %>% 
-    tidyr::pivot_longer(-group) %>% 
-    dplyr::filter(stringr::str_detect(name, "0d$")) %>% 
-    dplyr::mutate(
-      days = factor(readr::parse_number(name)),
-      group = stringr::str_to_title(group)
+    dplyr::group_by(date, group) %>% 
+    dplyr::summarise(
+      p = mean(close > ma_50 & close > ma_200 & ma_50 > ma_200, na.rm = TRUE)
     ) %>% 
-    ggplot(aes(days, value*100, group = group, color = group)) +
-    geom_line(linewidth = 1.5) +
+    dplyr::mutate(type = "By Group")
+
+  # graphing
+  plot_data <- dplyr::bind_rows(sdf, adf) %>% 
+    dplyr::mutate( 
+      type = factor(type, levels = c("By Size", "By Group")),
+      group = stringr::str_to_title(group),
+      group = factor(group, levels = c("Lrg", "Mid", "Sml", "Cyclical", "Growth", "Defensive"))
+    )
+  
+  plot_lab <- plot_data %>% 
+    dplyr::ungroup() %>% 
+    dplyr::filter(date == max(date))
+  
+  plot_data %>% 
+    ggplot(aes(date, p*100, color = group)) +
+    geom_line(linewidth = 0.9) +
+    geom_text(
+      data = plot_lab, 
+      aes(date, p*100, label = group, color = group),
+      hjust = -0.15
+    ) +
     geom_hline(yintercept = c(0, 100), color = "grey50") +
     geom_hline(yintercept = 50, color = "grey50", linetype = "dashed") +
-    scale_y_continuous(breaks = seq(0, 100, 10)) + 
-    scale_color_manual(values = c("black", "limegreen", "tomato", "dodgerblue")) +
-    labs(x = "Moving Average", y = "% of Stocks Above", color = "") + 
+    facet_grid(~type) +
+    expand_limits(x = as.Date(today + 90)) +
+    scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 10)) +
+    scale_color_manual(values = c("black", "grey30", "grey60", "limegreen", "dodgerblue", "tomato")) +
+    labs(
+      x = "Date", 
+      y = "% in Uptrend", 
+      caption = "(1) > 50DMA, (2) >200DMA, (3) 50DMA > 200DMA"
+    ) +
     theme(
-      legend.position = "top",
+      legend.position = "none", 
       panel.grid.minor = element_blank(), 
       panel.grid.major = element_blank()
     )
@@ -332,14 +348,14 @@ graph_ma_by_sector <- function(dat){
   
   plot_df %>% 
     ggplot() +
-    geom_line(aes(days, value*100, group = sector, color = sector), linewidth = 1.25) +
-    ggrepel::geom_text_repel(
-      data = plot_df %>% dplyr::filter(days == 200), 
-      aes(3.1, value*100, label = sector), 
-      hjust = 0, direction = "y", segment.color = NA
-    ) + 
     geom_hline(yintercept = c(0, 100), color = "grey50") +
     geom_hline(yintercept = 50, color = "grey50", linetype = "dashed") +
+    geom_line(aes(days, value*100, group = sector, color = sector), linewidth = 1.25) +
+    ggrepel::geom_text_repel(
+      data = plot_df %>% dplyr::filter(days == 200),
+      aes(3.1, value*100, label = sector, color = sector),
+      hjust = 0, direction = "y", segment.color = NA
+    ) +
     facet_grid(~group) + 
     scale_y_continuous(breaks = seq(0, 100, 10)) + 
     scale_color_manual(values = c(
@@ -540,19 +556,19 @@ graph_obos_1 <- function(dat, dt){
     )
 }
 
-graph_obos <- function(dat){
+graph_obos <- function(dat, past_years = 2){
   dates <- dat %>%
     distinct(date) %>%
-    subset(year(date) >= year(today)-2 & wday(date) == 6) %>%
+    subset(year(date) >= (year(today)-past_years) & wday(date) %in% c(2,4,6)) %>%
     pull(date)
   
   plot_data <- purrr::map_dfr(dates, ~ graph_obos_1(s, .x)) %>% 
     tidyr::pivot_longer(-date)
   
   plot_data %>% 
-    ggplot() +
+    ggplot(aes(date, value*100, fill = name, color = name)) +
     geom_hline(yintercept = 0) +
-    geom_histogram(aes(date, value*100, fill = name, color = name), stat = "identity") +
+    geom_area() +
     facet_grid(name ~ .) +
     scale_fill_manual(values = c("limegreen", "tomato")) +
     scale_color_manual(values = c("darkgreen", "darkred")) +

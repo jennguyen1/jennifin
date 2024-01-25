@@ -32,7 +32,7 @@ sidebar <- dashboardSidebar(
     menuItem("Github Source Code", href = "https://github.com/jennguyen1/jennifin", icon = icon("github"))
   ),
   div(
-    p("Copyright (c) 2023 Jennifer N Nguyen under the MIT License"),
+    p("Copyright (c) 2024 Jennifer N Nguyen under the MIT License"),
     style = "font-size:12px; color:grey; padding: 0px 10px; bottom: 0px; position: absolute"
   )
 )
@@ -125,6 +125,10 @@ tab_misc <- tabItem(
     tabPanel("Overbought/Oversold", box(
       width = NULL,
       div(plotOutput("graph_obos", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
+    )),
+    tabPanel("Breadth Uptrend", box(
+      width = NULL,
+      div(plotOutput("graph_breadth_uptrend_history", height = "500px", width = "900px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 900px") 
     )),
     tabPanel("GEX", box(
       width = NULL, 

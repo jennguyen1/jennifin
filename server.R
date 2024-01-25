@@ -270,6 +270,10 @@ shinyServer(function(input, output) {
     graph_ytd_distribution(stocks, etfs)
   })
   
+  output$graph_breadth_uptrend_history <- renderPlot({
+    graph_ma_uptrend_by_group(s, past_years = 2)
+  })
+  
   output$graph_obos <- renderPlot({
     graph_obos(s)
   })
