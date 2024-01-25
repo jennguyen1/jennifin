@@ -9,22 +9,26 @@ df <- googlesheets4::read_sheet(file, "Watchlist")
 
 dates <- data.frame(label = "t", date = "2024-01-02")
 
-ndf <- df %>% 
+odf <- df %>% 
   dplyr::mutate(
-    a = purrr::map(Ticker, ~ get_avwap_series(.x, dates))
+    res = purrr::map(Ticker, function(x){
+      tryCatch({
+        tidyquant::tq_get(x, from = "2024-01-02") %>% 
+          dplyr::summarise(
+            avwap = calculate_avwap(., "2024-01-02"), 
+            yday = tail(., 1)$close
+          )
+      }, error = function(e) data.frame(avwap = NA, yday = NA))
+    })
   ) %>% 
-  select(Ticker, Price, a) 
-
-odf <- ndf %>% 
-  mutate(avwap = purrr::map_dbl(a, function(d) if(nrow(d) == 0) NA else d[1,1,drop=TRUE])) %>% 
-  select(Ticker, avwap)
+  dplyr::select(Ticker, res) %>% 
+  tidyr::unnest(res) 
 
 assertthat::assert_that(nrow(df) == nrow(odf))
 googlesheets4::write_sheet(odf, file, 'add_avwaps')
 
 
 # etf screen -------------------------------------------------------------------
-graph_ma_by_group(stocks)
 
 plotly::ggplotly(
   etfs %>% 
@@ -97,30 +101,4 @@ ggplot() +
     panel.grid.major = element_blank(), 
     panel.grid.minor = element_blank()
   ) 
-
-
-# 50d 200d trend ---------------------------------------------------------------
-plot_data <- readr::read_csv("data/stats_ma_50d_gr_200d.csv") %>% 
-  dplyr::mutate(
-    hazy = ifelse(date < lubridate::ymd("2023-03-31"), '1', '2')
-  )
-
-plot_data %>% 
-  ggplot(aes(date, p, linetype = hazy, color = size)) + 
-  geom_hline(yintercept = c(0, 100), color = "grey50") +
-  geom_hline(yintercept = 50, color = "grey50", linetype = "dotted") +
-  geom_line(size = 0.75) + 
-  scale_x_date(date_breaks = "6 months") +
-  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 10)) +
-  scale_linetype_manual(values = c("dashed", "solid"), name = NULL) +
-  scale_color_manual(values = c("black", "blue", "dodgerblue")) +
-  labs(x = "", y = "% Stocks where 50MA > 200MA") + 
-  theme_bw() +
-  theme(
-    legend.position = "none",
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
-    panel.grid.minor = element_blank(),
-    panel.grid.major = element_blank()
-  )
-
 
