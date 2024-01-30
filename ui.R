@@ -47,16 +47,16 @@ main <- tabItem(
     tabPanel("Summary", box(
       width = NULL,
       solidHeader = TRUE, collapsible = FALSE,
-      div(DT::DTOutput("tab_performance_major"), style = "margin: 0 auto; max-width: 900px"),
+      div(DT::DTOutput("tab_performance_major"), style = "margin: 0 auto; max-width: 950px"),
       br()
     )), 
     tabPanel("MA Breadth", box(
       width = NULL,
-      div(plotOutput("graph_ma", height = "590px", width = "900px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 900px") 
+      div(plotOutput("graph_ma", height = "590px", width = "950px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 950px") 
     )),
     tabPanel("Swing High/Low Breadth", box(
       width = NULL,
-      div(plotOutput("graph_price_avwap", height = "590px", width = "900px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 900px") 
+      div(plotOutput("graph_price_avwap", height = "590px", width = "950px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 950px") 
     )) 
 ))
 
@@ -128,7 +128,7 @@ tab_misc <- tabItem(
     )),
     tabPanel("Breadth Uptrend", box(
       width = NULL,
-      div(plotOutput("graph_breadth_uptrend_history", height = "500px", width = "900px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 900px") 
+      div(plotOutput("graph_breadth_uptrend_history", height = "500px", width = "950px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 950px") 
     )),
     tabPanel("GEX", box(
       width = NULL, 

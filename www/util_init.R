@@ -75,7 +75,7 @@ query_ticker_data <- function(dat){
   
   d0 <- dat$ticker %>% 
     clean_ticker() %>% 
-    tidyquant::tq_get(from = "2020-01-01") %>% 
+    tidyquant::tq_get(from = "2019-01-01") %>% 
     dplyr::rename(ticker = symbol)
   
   dplyr::full_join(dat, d0, "ticker")
@@ -196,9 +196,8 @@ apply_technical_screen <- function(dat, etfs){
 
 
 ### data collection ### 
-collect_ta_stats <- function(stocks, stocks_ta){
+collect_ta_stats <- function(stocks, stocks_ta, date){
   
-  date <- as.Date(stringr::str_trim(readr::read_file("data/read_time.txt")))
   file <- "data/stats_ta_screen.csv"
   prev_data <- readr::read_csv(file)
   

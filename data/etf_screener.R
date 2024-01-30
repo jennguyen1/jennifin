@@ -16,11 +16,10 @@ stocks <- clean_data(s, company, sector, industry, size)
 stocks_ta_screen <- apply_technical_screen(stocks, etfs)
 
 # save output
-save(e, s, file = "data/data0.RData")
-save(etfs, stocks, stocks_ta_screen, file = "data/data.RData")
+save(e, s, etfs, stocks, stocks_ta_screen, file = "data/data.RData")
 
 # data collection
-collect_ta_stats(stocks = stocks, stocks_ta = stocks_ta_screen)
+collect_ta_stats(stocks = stocks, stocks_ta = stocks_ta_screen, date = max(s$date, na.rm = TRUE))
 
 
 ### Every Quarter - SP Companies ###
