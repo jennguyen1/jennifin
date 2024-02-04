@@ -20,8 +20,8 @@ pdiff <- function(x, base) round((x-base)/base, 3)
 clean_ticker <- function(ticker){
   plyr::mapvalues(
     ticker, # ticker transcription if needed
-    c("BRKB", "MOG.A", "BF.B"), 
-    c("BRK-B", "MOG-A", "BF-B"), 
+    c("BRKB", "BRKB", "MOG.A", "BF.B"), 
+    c("BRK-B", "BRK.B", "MOG-A", "BF-B"), 
     warn_missing = FALSE
   )
 }
@@ -176,7 +176,7 @@ apply_technical_screen <- function(dat, etfs){
   # initial filter based 50D/200D uptrend, S/R, RS to spy / sector
   d1 <- dat %>% 
     dplyr::filter(return_50d > 0 & return_200d > 0 & return_50d < return_200d) %>%  # keep above 50d & 200d SMA and 50d SMA > 200d SMA
-    dplyr::filter(return_avwap_anchor_1 >= 0) %>% # at or above avwap from anchor date high (target something like 52w high for stocks), may change
+    dplyr::filter(return_avwap_anchor_1 >= 0) %>% # at or above avwap from anchor date high (target something like 52w high for stocks), note may change
     dplyr::filter(return_1m - spy_1m > -0.01) %>% # remove laggards to SPY over last 1m
     dplyr::left_join(sector_1m, "sector", suffix = c("", "_sect")) %>% 
     dplyr::filter(return_1m - return_1m_sect > -0.01)
@@ -219,3 +219,89 @@ collect_ta_stats <- function(stocks, stocks_ta, date){
     readr::write_csv(file)
 }
 
+
+### breadth animation ###
+animate_breadth <- function(dat){
+  library(gganimate)
+  
+  dat_sub <- dat %>% 
+    dplyr::filter(year(date) >= 2020) %>% 
+    subset(wday(date) %in% c(2,4,6))
+  
+  grp <- dat_sub %>% 
+    dplyr::distinct(sector) %>% 
+    dplyr::arrange(sector) %>% 
+    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
+  
+  df <- dat_sub %>% 
+    dplyr::left_join(grp, "sector") %>% 
+    dplyr::select(date, ticker, sector, group, size, close, dplyr::starts_with("ma")) %>% 
+    dplyr::mutate(dplyr::across(dplyr::starts_with("ma"), \(x) close > x))
+  
+  sdf <- df %>% # by size
+    dplyr::group_by(date, size) %>% 
+    dplyr::summarise(across(
+      dplyr::starts_with("ma"),
+      \(x) mean(x, na.rm = TRUE)
+    )) %>% 
+    dplyr::mutate(group = "all") %>% 
+    dplyr::rename(sector = size)
+  
+  adf <- df %>% # by sector
+    dplyr::group_by(date, group, sector) %>% 
+    dplyr::summarise(dplyr::across(
+      dplyr::starts_with("ma"),
+      \(x) mean(x, na.rm = TRUE)
+    ))
+  
+  plot_df <- dplyr::bind_rows(sdf, adf) %>% 
+    tidyr::pivot_longer(-c(date, group, sector)) %>% 
+    dplyr::mutate(
+      days = factor(readr::parse_number(name)),
+      sector = plyr::mapvalues(
+        sector, 
+        c("Consumer Staples", "Communication Services", "Consumer Discretionary"), 
+        c("Staples", "Communications", "Discretionary")
+      ),
+      group = factor(stringr::str_to_title(group), levels = c("All", "Growth", "Cyclical", "Defensive"))
+    ) 
+  
+  # animate graph
+  a <- plot_df %>% 
+    ggplot() +
+    geom_hline(yintercept = c(0, 100), color = "grey50") +
+    geom_hline(yintercept = 50, color = "grey50", linetype = "dashed") +
+    geom_line(aes(days, value*100, group = sector, color = sector), linewidth = 1.25) +
+    geom_text(
+      data = plot_df %>% dplyr::filter(days == 200),
+      aes(3.1, value*100, label = sector, color = sector),
+      hjust = 0
+    ) +
+    facet_grid(~group) + 
+    scale_y_continuous(breaks = seq(0, 100, 10)) + 
+    scale_color_manual(values = c(
+      "deepskyblue", "dodgerblue", "darkgreen", "yellowgreen", "red", "green3", "black", 
+      "green4", "grey30", "lightskyblue", "grey60", "firebrick", "blue", "coral1"
+    )) +
+    expand_limits(x = 4.75) +
+    labs(x = "Moving Average", y = "% of Stocks Above", color = "") + 
+    theme(
+      legend.position = "none",
+      panel.grid.minor = element_blank(),
+      panel.grid.major.x = element_blank()
+    ) +
+    transition_manual(frames = date) +
+    labs(title = '{current_frame}')
+  
+  nf <- plot_df %>% count(date) %>% nrow()
+  animate(
+    a, 
+    nframes = nf, fps = 6,
+    height = 6, width = 10, units = "in", 
+    res = 110, 
+    end_pause = 60
+  )
+  anim_save("www/ma_breadth.gif")
+  system("ffmpeg -i www/ma_breadth.gif -movflags faststart -pix_fmt yuv420p -vf 'scale=trunc(iw/2)*2:trunc(ih/2)*2' www/ma_breadth.mp4")
+  file.remove("www/ma_breadth.gif")
+}

@@ -359,7 +359,7 @@ graph_ma_by_sector <- function(dat){
     facet_grid(~group) + 
     scale_y_continuous(breaks = seq(0, 100, 10)) + 
     scale_color_manual(values = c(
-      "deepskyblue", "dodgerblue", "darkgreen", "lawngreen", "red", "green3", "black", 
+      "deepskyblue", "dodgerblue", "darkgreen", "yellowgreen", "red", "green3", "black", 
       "green4", "grey30", "lightskyblue", "grey60", "firebrick", "blue", "coral1"
     )) +
     expand_limits(x = 4.75) +
@@ -500,6 +500,51 @@ graph_price_avwap <- function(dat){
     cowplot::get_legend(g2),
     nrow = 2, rel_heights = c(2, .2)
   )
+}
+
+graph_ma_downtrend_sector <- function(dat){ # (1) <50d (2) <200d (3) 50d < 200d
+  grp <- dat %>% 
+    dplyr::distinct(sector) %>% 
+    dplyr::arrange(sector) %>% 
+    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
+  
+  plot_df_a <- dat %>% 
+    dplyr::left_join(grp, "sector") %>% 
+    dplyr::group_by(group, sector) %>% 
+    dplyr::summarise(p = mean(return_50d < 0 & return_200d < 0 & return_50d > return_200d, na.rm = TRUE)*100) %>% 
+    dplyr::ungroup() 
+  
+  plot_df <- dat %>% 
+    dplyr::group_by(size) %>% 
+    dplyr::summarise(p = mean(return_50d < 0 & return_200d < 0 & return_50d > return_200d, na.rm = TRUE)*100) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::mutate(
+      group = "all", 
+      sector = plyr::mapvalues(size, c("SML", "MID", "LRG"), c("SP600", "SP400", "SP500")), 
+      size = NULL
+    ) %>% 
+    dplyr::bind_rows(plot_df_a) %>% 
+    dplyr::mutate(
+      sector = plyr::mapvalues(
+        sector, 
+        c("Consumer Staples", "Communication Services", "Consumer Discretionary"), 
+        c("Staples", "Communications", "Discretionary")
+      ),
+      sector = forcats::fct_reorder(sector, p)
+    )  
+  
+  plot_df %>% 
+    ggplot(aes(sector, p, fill = group)) +
+    geom_bar(stat = "identity", color = "black") +
+    scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 10)) +
+    scale_fill_manual(values = c("grey70", "limegreen", "tomato", "dodgerblue")) +
+    labs(x = "", y = "% in Downtrend", caption = "(1) < 50DMA, (2) <200DMA, (3) 50DMA < 200DMA") + 
+    coord_flip() +
+    theme(
+      legend.position = "none",
+      panel.grid.minor = element_blank(),
+      panel.grid.major.y = element_blank()
+    )
 }
 
 # misc

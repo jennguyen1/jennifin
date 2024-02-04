@@ -126,18 +126,27 @@ tab_misc <- tabItem(
       width = NULL,
       div(plotOutput("graph_obos", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
     )),
-    tabPanel("Breadth Uptrend", box(
-      width = NULL,
-      div(plotOutput("graph_breadth_uptrend_history", height = "500px", width = "950px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 950px") 
-    )),
     tabPanel("GEX", box(
       width = NULL, 
       plotOutput("graph_gex", height = "500px") %>% shinycssloaders::withSpinner(type = 7)
     )),
-    
     tabPanel("52w High/Low by Sector", box(
       width = NULL,
       div(plotOutput("graph_hilo_sector", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px")
+    )),
+    tabPanel("Breadth Uptrend", box(
+      width = NULL,
+      div(plotOutput("graph_breadth_uptrend_history", height = "500px", width = "950px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 950px") 
+    )),
+    tabPanel("In Downtrend", box( 
+      width = NULL, # note: opposite of the graph_ma 2nd plot, can alternate when environment changes
+      div(plotOutput("graph_up_down_trend", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
+    )),
+    tabPanel("Breadth Change Over Time", box( 
+      width = NULL,
+      div(
+        tags$video(src = "ma_breadth.mp4", height = "500px", width = "800px", type = "video/mp4", controls = "controls"),
+          style = "margin: 0 auto; text-align: center;")
     ))
 ))
 

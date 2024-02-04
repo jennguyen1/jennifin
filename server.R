@@ -291,6 +291,10 @@ shinyServer(function(input, output) {
     )
   })
   
+  output$graph_up_down_trend <- renderPlot({ # note: opposite of the graph_ma 2nd plot, can alternate when environment changes
+    graph_ma_downtrend_sector(stocks)
+  })
+  
   output$graph_price_avwap <- renderPlot({ 
     graph_price_avwap(stocks)
   })
