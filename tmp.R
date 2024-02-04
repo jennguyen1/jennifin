@@ -13,7 +13,7 @@ odf <- df %>%
   dplyr::mutate(
     res = purrr::map(Ticker, function(x){
       tryCatch({
-        tidyquant::tq_get(x, from = "2024-01-02") %>% 
+        tidyquant::tq_get(clean_ticker(x), from = "2024-01-02") %>% 
           dplyr::summarise(
             avwap = calculate_avwap(., "2024-01-02"), 
             yday = tail(., 1)$close
@@ -30,19 +30,13 @@ googlesheets4::write_sheet(odf, file, 'add_avwaps')
 
 # etf screen -------------------------------------------------------------------
 
-plotly::ggplotly(
-  etfs %>% 
-    dplyr::filter(type %in% c("major", "factor", "sector")) %>% 
-    graph_anchor_scatter(category)
-)
-
 spy_1m <- dplyr::filter(etfs, ticker == "SPY")$return_1m
 etf_f <- etfs %>% 
   dplyr::filter(return_50d > 0 & return_200d > 0 & return_50d < return_200d) %>% 
   dplyr::filter(return_avwap_anchor_1 >= 0) %>% 
   dplyr::filter(return_1m > spy_1m) %>% 
-  dplyr::mutate(rsi = purrr::map(ticker, get_rsi_stats)) %>%
-  tidyr::unnest(rsi) %>% 
+  # dplyr::mutate(rsi = purrr::map(ticker, get_rsi_stats)) %>%
+  # tidyr::unnest(rsi) %>% 
   dplyr::select(
     ticker, desc, type, category, category2, 
     return_anchor_1, return_avwap_anchor_1,
@@ -50,27 +44,28 @@ etf_f <- etfs %>%
     days_since_os, 
     dplyr::matches("52")
   ) %>% 
-  dplyr::arrange(dplyr::desc(below_52w_high)) 
+  dplyr::arrange(dplyr::desc(return_below_52w_hi)) 
 
 etf_f %>% View()
 
 
 # other stocks ----------------------------------------------------------------
-(os <- googlesheets4::read_sheet("10oKFDmMz0UY78I4ARn2JKblJsajIcw2Eda3O-Afqpxs"))
-os_clean <- clean_data_stocks(os)
-scan2 <- apply_technical_screen(os_clean)
-
-plotly::ggplotly(
-  os %>% 
-    subset(ticker %in% scan2$ticker) %>% 
-    graph_anchor_scatter(sector)
-)
-
-plotly::ggplotly(
-  stocks %>% 
-    subset(ticker %in% stocks_ta_screen$ticker) %>% 
-    graph_anchor_scatter(sector)
-)
+# todo
+# (os <- googlesheets4::read_sheet("10oKFDmMz0UY78I4ARn2JKblJsajIcw2Eda3O-Afqpxs"))
+# os_clean <- clean_data_stocks(os)
+# scan2 <- apply_technical_screen(os_clean)
+# 
+# plotly::ggplotly(
+#   os %>%
+#     subset(ticker %in% scan2$ticker) %>%
+#     graph_anchor_scatter(sector)
+# )
+# 
+# plotly::ggplotly(
+#   stocks %>%
+#     subset(ticker %in% stocks_ta_screen$ticker) %>%
+#     graph_anchor_scatter(sector)
+# )
 
 
 # gex proof of concept ---------------------------------------------------------
