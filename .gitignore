@@ -44,4 +44,5 @@ vignettes/*.pdf
 .Rproj.user
 *csv
 *txt
+*mp4
 *RData
