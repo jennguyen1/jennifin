@@ -285,6 +285,7 @@ animate_breadth <- function(dat){
     )) +
     expand_limits(x = 4.75) +
     labs(x = "Moving Average", y = "% of Stocks Above", color = "") + 
+    theme_bw(base_family = "Arial", base_size = 16) + 
     theme(
       legend.position = "none",
       panel.grid.minor = element_blank(),
@@ -299,7 +300,7 @@ animate_breadth <- function(dat){
     nframes = nf, fps = 6,
     height = 6, width = 10, units = "in", 
     res = 110, 
-    end_pause = 60
+    end_pause = 30
   )
   anim_save("www/ma_breadth.gif")
   system("ffmpeg -i www/ma_breadth.gif -movflags faststart -pix_fmt yuv420p -vf 'scale=trunc(iw/2)*2:trunc(ih/2)*2' www/ma_breadth.mp4")
