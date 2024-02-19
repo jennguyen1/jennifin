@@ -302,7 +302,9 @@ animate_breadth <- function(dat){
     res = 110, 
     end_pause = 30
   )
+  
   anim_save("www/ma_breadth.gif")
+  file.remove("www/ma_breadth.mp4")
   system("ffmpeg -i www/ma_breadth.gif -movflags faststart -pix_fmt yuv420p -vf 'scale=trunc(iw/2)*2:trunc(ih/2)*2' www/ma_breadth.mp4")
   file.remove("www/ma_breadth.gif")
 }
