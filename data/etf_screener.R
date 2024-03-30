@@ -26,12 +26,9 @@ animate_breadth(s)
 
 
 ### Every Quarter - SP Companies ###
-# The source is www.ssga.com
-# tidyquant::tq_index("SP500") %>% readr::write_csv("~/Downloads/lc.csv")
-# tidyquant::tq_index("SP400") %>% readr::write_csv("~/Downloads/mc.csv")
-# tidyquant::tq_index("SP600") %>% readr::write_csv("~/Downloads/sc.csv")
 
 # pull data from stockcharts - get sector & industry
+# now is pre-built as example scan
 # [group is SP500] OR [group is SP400] OR [group is SP600]
 
 # other stocks not in SP1500 - requires a little cleanup (rm na's)

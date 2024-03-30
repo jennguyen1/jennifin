@@ -1,9 +1,11 @@
+library(tidyverse)
 source('www/util_init.R')
 source('www/util.R')
 
 
 # avwap updates ----------------------------------------------------------
 
+googlesheets4::gs4_auth("jennifernguyen1992@gmail.com")
 file <- "12Tv_-fBoLMc1hcyTWw5jEzd_z3P5Q-uhjHp12j1WlTo"
 df <- googlesheets4::read_sheet(file, "Watchlist")
 
@@ -27,6 +29,7 @@ odf <- df %>%
 assertthat::assert_that(nrow(df) == nrow(odf))
 googlesheets4::write_sheet(odf, file, 'add_avwaps')
 
+# [ACP list is 243984] and [next earnings date < 20240218] and [next earnings date > 20240201]
 
 # etf screen -------------------------------------------------------------------
 
