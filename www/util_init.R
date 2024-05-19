@@ -7,10 +7,10 @@ today <- Sys.Date()
 year_start <- "2024-01-02"
 
 # note this may change
-anchor_1 <- "2023-07-31"
-anchor_2 <- "2023-10-27"
-anchor_1_msg <- "Jul High"
-anchor_2_msg <- "Oct Low"
+anchor_1 <- "2024-03-28"
+anchor_2 <- "2024-04-19"
+anchor_1_msg <- "Mar High"
+anchor_2_msg <- "Apr Low"
 anchor_msg <- anchor_1_msg
 
 
