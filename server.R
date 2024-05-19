@@ -296,7 +296,7 @@ shinyServer(function(input, output) {
   })
   
   output$graph_price_avwap <- renderPlot({ 
-    graph_price_avwap(stocks)
+    graph_price_avwap(stocks, input$var_pa_graph)
   })
   
   output$graph_hilo_sector <- renderPlot({ 

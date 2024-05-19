@@ -416,13 +416,13 @@ graph_ma_uptrend_sector <- function(dat){ # (1) >50d (2) >200d (3) 50d > 200d
     )
 }
 
-graph_price_avwap_1 <- function(dat, anchor, anchor_label){
+graph_price_avwap_1 <- function(dat, anchor, anchor_label, variable){
   plot_data <- dat %>% 
     dplyr::filter(stringr::str_detect(var, anchor)) %>% 
     dplyr::mutate(var = ifelse(stringr::str_detect(var, "avwap"), "AVWAP", "Price"))
     
   plot_order <- plot_data %>% 
-    dplyr::filter(var == "Price") %>% 
+    dplyr::filter(var == variable) %>% 
     dplyr::arrange(p) %>% 
     dplyr::pull(sector)
   
@@ -449,7 +449,7 @@ graph_price_avwap_1 <- function(dat, anchor, anchor_label){
     )
 }
 
-graph_price_avwap <- function(dat){
+graph_price_avwap <- function(dat, var = "Price"){
   
   grp <- dat %>% 
     dplyr::distinct(sector) %>% 
@@ -487,8 +487,8 @@ graph_price_avwap <- function(dat){
     tidyr::pivot_longer(dplyr::starts_with("p"), names_to = "var", values_to = "p") 
 
   # graph and combine
-  g1 <- graph_price_avwap_1(plot_df, "anchor_1", anchor_1_msg)
-  g2 <- graph_price_avwap_1(plot_df, "anchor_2", anchor_2_msg)
+  g1 <- graph_price_avwap_1(plot_df, "anchor_1", anchor_1_msg, var)
+  g2 <- graph_price_avwap_1(plot_df, "anchor_2", anchor_2_msg, var)
   
   
   cowplot::plot_grid(
