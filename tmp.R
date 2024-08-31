@@ -100,3 +100,9 @@ ggplot() +
     panel.grid.minor = element_blank()
   ) 
 
+# cape swr ---------------------------------------------------------------------
+readr::read_csv("~/Downloads/CAPEoutput4blog.csv") %>% 
+  subset(year(Date) >= 1995) %>%
+  ggplot(aes(Date, CAPE.ERN.2)) +
+  geom_line() +
+  theme_bw()
