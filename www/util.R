@@ -249,7 +249,7 @@ graph_ma_uptrend_by_group <- function(dat, past_years = 2){
   grp <- dat %>% 
     dplyr::distinct(sector) %>% 
     dplyr::arrange(sector) %>% 
-    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
+    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "defensive", "growth", "defensive"))
   
   df <- dat %>% 
     subset(year(date) >= (year(today)-past_years) & wday(date) %in% c(2,4,6)) %>%
@@ -311,7 +311,7 @@ graph_ma_by_sector <- function(dat){
   grp <- dat %>% 
     dplyr::distinct(sector) %>% 
     dplyr::arrange(sector) %>% 
-    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
+    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "defensive", "growth", "defensive"))
   
   df <- dat %>% 
     dplyr::left_join(grp, "sector") %>% 
@@ -360,7 +360,7 @@ graph_ma_by_sector <- function(dat){
     scale_y_continuous(breaks = seq(0, 100, 10)) + 
     scale_color_manual(values = c(
       "deepskyblue", "dodgerblue", "darkgreen", "yellowgreen", "red", "green3", "black", 
-      "green4", "grey30", "lightskyblue", "grey60", "firebrick", "blue", "coral1"
+      "green4", "grey30", "hotpink1", "grey60", "firebrick", "blue", "coral1"
     )) +
     expand_limits(x = 4.75) +
     labs(x = "Moving Average", y = "% of Stocks Above", color = "") + 
@@ -375,7 +375,7 @@ graph_ma_uptrend_sector <- function(dat){ # (1) >50d (2) >200d (3) 50d > 200d
   grp <- dat %>% 
     dplyr::distinct(sector) %>% 
     dplyr::arrange(sector) %>% 
-    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
+    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "defensive", "growth", "defensive"))
   
   plot_df_a <- dat %>% 
     dplyr::left_join(grp, "sector") %>% 
@@ -454,7 +454,7 @@ graph_price_avwap <- function(dat, var = "Price"){
   grp <- dat %>% 
     dplyr::distinct(sector) %>% 
     dplyr::arrange(sector) %>% 
-    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
+    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "defensive", "growth", "defensive"))
   
   plot_df_a <- dat %>% 
     dplyr::left_join(grp, "sector") %>% 
@@ -506,7 +506,7 @@ graph_ma_downtrend_sector <- function(dat){ # (1) <50d (2) <200d (3) 50d < 200d
   grp <- dat %>% 
     dplyr::distinct(sector) %>% 
     dplyr::arrange(sector) %>% 
-    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
+    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "defensive", "growth", "defensive"))
   
   plot_df_a <- dat %>% 
     dplyr::left_join(grp, "sector") %>% 

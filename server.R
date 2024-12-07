@@ -304,7 +304,7 @@ shinyServer(function(input, output) {
     grp <- stocks %>% 
       dplyr::distinct(sector) %>% 
       dplyr::arrange(sector) %>% 
-      dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
+      dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "defensive", "growth", "defensive"))
     
     plot_df_a <- stocks %>% 
       dplyr::left_join(grp, "sector") %>% 

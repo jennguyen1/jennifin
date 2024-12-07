@@ -7,9 +7,9 @@ today <- Sys.Date()
 year_start <- "2024-01-02"
 
 # note this may change
-anchor_1 <- "2024-07-16"
+anchor_1 <- "2024-11-11"
 anchor_2 <- "2024-08-05"
-anchor_1_msg <- "Jul High"
+anchor_1_msg <- "Nov High"
 anchor_2_msg <- "Aug Low"
 anchor_msg <- anchor_1_msg
 
@@ -231,7 +231,7 @@ animate_breadth <- function(dat){
   grp <- dat_sub %>% 
     dplyr::distinct(sector) %>% 
     dplyr::arrange(sector) %>% 
-    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "growth", "growth", "defensive"))
+    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "defensive", "growth", "defensive"))
   
   df <- dat_sub %>% 
     dplyr::left_join(grp, "sector") %>% 
@@ -281,7 +281,7 @@ animate_breadth <- function(dat){
     scale_y_continuous(breaks = seq(0, 100, 10)) + 
     scale_color_manual(values = c(
       "deepskyblue", "dodgerblue", "darkgreen", "yellowgreen", "red", "green3", "black", 
-      "green4", "grey30", "lightskyblue", "grey60", "firebrick", "blue", "coral1"
+      "green4", "grey30", "hotpink1", "grey60", "firebrick", "blue", "coral1"
     )) +
     expand_limits(x = 4.75) +
     labs(x = "Moving Average", y = "% of Stocks Above", color = "") + 
