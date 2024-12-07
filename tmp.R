@@ -106,3 +106,10 @@ readr::read_csv("~/Downloads/CAPEoutput4blog.csv") %>%
   ggplot(aes(Date, CAPE.ERN.2)) +
   geom_line() +
   theme_bw()
+
+# lengths of bear markets >20% ------------------------------------------------------
+# includes weekends & holidays
+x <- c(67, 783, 173, 95, 401, 390, 150, 229, 535, 133, 363, 99, 196, 240, 543, 630, 622, 101, 929, 517, 33, 282)
+median(x) # 1 yr
+max(x) # 2.5 yrs
+
