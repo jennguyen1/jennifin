@@ -92,7 +92,7 @@ ggplot() +
   geom_line(data = price, aes(date, close), size = 1.05) + 
   geom_line(data = price, aes(date, sma), color = "dodgerblue", size = 1.05) +
   scale_color_manual(values = c("tomato", "limegreen")) +
-  labs(x = "Date", y = "SPY Price", color = "Market Environment Buy Signal") +
+  labs(x = "Date", y = "SPY Price", color = "Market Environment GEX Signal") +
   theme_bw() + 
   theme(
     legend.position = "top",
@@ -112,4 +112,7 @@ readr::read_csv("~/Downloads/CAPEoutput4blog.csv") %>%
 x <- c(67, 783, 173, 95, 401, 390, 150, 229, 535, 133, 363, 99, 196, 240, 543, 630, 622, 101, 929, 517, 33, 282)
 median(x) # 1 yr
 max(x) # 2.5 yrs
+
+# w 10m strat, ATH to 200D cross = -10% median
+
 

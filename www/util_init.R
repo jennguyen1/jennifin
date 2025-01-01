@@ -7,10 +7,10 @@ today <- Sys.Date()
 year_start <- "2024-01-02"
 
 # note this may change
-anchor_1 <- "2024-11-11"
-anchor_2 <- "2024-08-05"
-anchor_1_msg <- "Nov High"
-anchor_2_msg <- "Aug Low"
+anchor_1 <- "2024-12-04"
+anchor_2 <- "2024-10-31"
+anchor_1_msg <- "Dec High"
+anchor_2_msg <- "Oct Low"
 anchor_msg <- anchor_1_msg
 
 
@@ -104,7 +104,7 @@ create_ta_columns <- function(dat){
 
 create_price_columns <- function(dat, anchor_1, anchor_2){
   
-  dat_sub_1y <- tail(dat, 252) # 1y
+  dat_sub_1y <- tail(dat, 255) # 1y
   
   out <- dat_sub_1y %>% 
     dplyr::summarise(
