@@ -131,10 +131,10 @@ tab_misc <- tabItem(
       width = NULL, 
       plotOutput("graph_gex", height = "500px") %>% shinycssloaders::withSpinner(type = 7)
     )),
-    tabPanel("52w High/Low by Sector", box(
-      width = NULL,
-      div(plotOutput("graph_hilo_sector", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px")
-    )),
+    # tabPanel("52w High/Low by Sector", box( # removed - lagging data
+    #   width = NULL,
+    #   div(plotOutput("graph_hilo_sector", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px")
+    # )),
     tabPanel("Breadth Uptrend", box(
       width = NULL,
       div(plotOutput("graph_breadth_uptrend_history", height = "500px", width = "950px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 950px") 

@@ -4,7 +4,7 @@ options(readr.show_col_types = FALSE)
 ## some date stuff ##
 
 today <- Sys.Date()
-year_start <- "2024-01-02"
+year_start <- "2025-01-02"
 
 # note this may change
 anchor_1 <- "2024-12-04"
@@ -104,7 +104,7 @@ create_ta_columns <- function(dat){
 
 create_price_columns <- function(dat, anchor_1, anchor_2){
   
-  dat_sub_1y <- tail(dat, 255) # 1y
+  dat_sub_1y <- tail(dat, 252) # 1y
   
   out <- dat_sub_1y %>% 
     dplyr::summarise(
