@@ -70,6 +70,39 @@ get_rsi_stats <- function(dat){
 }
 
 
+### db update ###
+prep_for_db_upload <- function(dat, d_old){
+  
+  d_rsi <- dat %>% 
+    dplyr::mutate(date = as.Date(date)) %>% 
+    tidyr::nest(data = -ticker) %>% 
+    dplyr::mutate(data = purrr::map(data, function(d){
+      dplyr::mutate(d, rsi = tryCatch(TTR::RSI(close, n = 14), error = function(e) NA))
+    })) %>% 
+    tidyr::unnest(data) 
+  
+  dplyr::anti_join(d_rsi, d_old %>% dplyr::mutate(date = as.Date(date)), c("ticker", "date")) %>% 
+    dplyr::filter(!is.na(close))
+}
+
+add_to_price_db <- function(dat, db = "data/stock_prices.db"){
+  db_conn <- DBI::dbConnect(duckdb::duckdb(), db)
+  tryCatch({
+    DBI::dbWriteTable(db_conn, "prices", dat, append = TRUE)
+    message("Data Uploaded to DB")
+  }, 
+  finally = {
+    DBI::dbDisconnect(db_conn)
+  })
+}
+
+run_db_update <- function(){
+  reticulate::py_run_file("www/extract_price_data.py")
+  d_ready_upload <- prep_for_db_upload(py$d_out, py$d_old)
+  add_to_price_db(d_ready_upload)
+}
+
+
 ### data creation ###
 query_ticker_data <- function(dat){
   

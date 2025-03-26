@@ -1,0 +1,62 @@
+CREATE TABLE stocks(
+  ticker TEXT NOT NULL,
+  company TEXT NOT NULL,
+  sector TEXT NOT NULL,
+  industry TEXT NOT NULL,
+  size TEXT NOT NULL,
+  PRIMARY KEY(ticker)
+);
+CREATE TABLE etfs(
+  ticker TEXT NOT NULL,
+  description TEXT NOT NULL,
+  e_type TEXT NOT NULL,
+  category TEXT NOT NULL,
+  category2 TEXT NOT NULL,
+  PRIMARY KEY(ticker)
+);
+
+
+CREATE TABLE prices(
+  ticker TEXT NOT NULL,
+  date DATE NOT NULL,
+  open DOUBLE,
+  high DOUBLE,
+  low DOUBLE,
+  close DOUBLE,
+  volume HUGEINT,
+  rsi DOUBLE,
+  UNIQUE(ticker, date)
+);
+CREATE UNIQUE INDEX prices_index ON prices(ticker, date);
+
+
+clean <- function(dat){
+  dat %>%
+    mutate(volume = round(volume)) %>%
+    select(ticker, date, open, high, low, close, volume, rsi)
+}
+mydb <- dbConnect(duckdb(), "stock_prices.db")
+dbWriteTable(mydb, "etfs", readr::read_csv("data/tickers_etf.csv") %>% rename(description = desc, e_type = type), append = TRUE)
+dbWriteTable(mydb, "stocks", readr::read_csv("data/tickers_stock.csv") , append = TRUE)
+dbWriteTable(mydb, "prices", bind_rows(e,s) %>% clean(), append = TRUE)
+dbDisconnect(mydb)
+
+
+CREATE VIEW prices_w_ma AS(
+  WITH add_ma AS (
+    SELECT 
+    *,
+    AVG(close) OVER (PARTITION BY ticker ORDER BY ticker, date ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) as ma_20_pre,
+    AVG(close) OVER (PARTITION BY ticker ORDER BY ticker, date ROWS BETWEEN 49 PRECEDING AND CURRENT ROW) as ma_50_pre,
+    AVG(close) OVER (PARTITION BY ticker ORDER BY ticker, date ROWS BETWEEN 199 PRECEDING AND CURRENT ROW) as ma_200_pre,
+    ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY ticker, date) as i
+    FROM prices
+  )
+  SELECT 
+  ticker, date, open, high, low, close, volume, rsi,
+  CASE WHEN i BETWEEN 1 AND 19 THEN NULL ELSE ma_20_pre END as ma_20,
+  CASE WHEN i BETWEEN 1 AND 49 THEN NULL ELSE ma_50_pre END as ma_50,
+  CASE WHEN i BETWEEN 1 AND 199 THEN NULL ELSE ma_200_pre END as ma_200
+  FROM add_ma
+)
+;

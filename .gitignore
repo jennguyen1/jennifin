@@ -43,6 +43,5 @@ vignettes/*.pdf
 # Data files
 .Rproj.user
 *csv
-*txt
 *mp4
 *RData
