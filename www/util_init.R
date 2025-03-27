@@ -1,5 +1,5 @@
 options(readr.show_col_types = FALSE)
-
+source("www/db_executions.R")
 
 ## some date stuff ##
 
@@ -94,16 +94,6 @@ run_db_update <- function(){
   add_to_price_db(d_ready_upload)
 }
 
-query_db <- function(query, db = "data/stock_prices.db"){
-  db_conn <- DBI::dbConnect(duckdb::duckdb(), db)
-  tryCatch({
-    DBI::dbGetQuery(db_conn, query)
-  }, 
-  finally = {
-    DBI::dbDisconnect(db_conn)
-  })
-}
-
 execute_in_db <- function(query, db = "data/stock_prices.db"){
   db_conn <- DBI::dbConnect(duckdb::duckdb(), db)
   tryCatch({
@@ -114,6 +104,25 @@ execute_in_db <- function(query, db = "data/stock_prices.db"){
   })
 }
 
+add_view_avwap <- function(dt_name, dt, db = "data/stock_prices.db"){
+  query <- stringr::str_glue(view_creation['avwap'])
+  execute_in_db(query, db = db)
+}
+
+add_view_price_anchor <- function(dt_name, dt, db = "data/stock_prices.db"){
+  query <- stringr::str_glue(view_creation['price_anchor'])
+  execute_in_db(query, db = db)
+}
+
+query_db <- function(query, db = "data/stock_prices.db"){
+  db_conn <- DBI::dbConnect(duckdb::duckdb(), db)
+  tryCatch({
+    DBI::dbGetQuery(db_conn, query)
+  }, 
+  finally = {
+    DBI::dbDisconnect(db_conn)
+  })
+}
 
 ### data creation ###
 create_price_columns <- function(dat, anchor_1, anchor_2){
