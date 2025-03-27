@@ -63,12 +63,13 @@ get_rsi_stats <- function(dat){
 
 ### db update ###
 prep_for_db_upload <- function(dat, d_old){
-  
   d_rsi <- dat %>% 
     dplyr::mutate(date = as.Date(date)) %>% 
     tidyr::nest(data = -ticker) %>% 
     dplyr::mutate(data = purrr::map(data, function(d){
-      dplyr::mutate(d, rsi = tryCatch(TTR::RSI(close, n = 14), error = function(e) NA))
+      d %>% 
+        dplyr::arrange(date) %>%
+        dplyr::mutate(rsi = tryCatch(TTR::RSI(close, n = 14), error = function(e) NA))
     })) %>% 
     tidyr::unnest(data) 
   
@@ -97,6 +98,16 @@ query_db <- function(query, db = "data/stock_prices.db"){
   db_conn <- DBI::dbConnect(duckdb::duckdb(), db)
   tryCatch({
     DBI::dbGetQuery(db_conn, query)
+  }, 
+  finally = {
+    DBI::dbDisconnect(db_conn)
+  })
+}
+
+execute_in_db <- function(query, db = "data/stock_prices.db"){
+  db_conn <- DBI::dbConnect(duckdb::duckdb(), db)
+  tryCatch({
+    DBI::dbExecute(db_conn, query)
   }, 
   finally = {
     DBI::dbDisconnect(db_conn)
