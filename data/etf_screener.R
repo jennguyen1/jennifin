@@ -2,14 +2,33 @@
 library(tidyverse)
 source("www/util_init.R")
 
-Sys.time() # typically 10-15 min
-e <- readr::read_csv("data/tickers_etf.csv") %>% 
-  query_ticker_data() %>% 
-  create_ta_columns()
-s <- readr::read_csv("data/tickers_stock.csv") %>% 
-  query_ticker_data() %>% 
-  create_ta_columns()
-Sys.time()
+# Sys.time() # typically 10-15 min
+# e <- readr::read_csv("data/tickers_etf.csv") %>%
+#   query_ticker_data() %>%
+#   create_ta_columns()
+# s <- readr::read_csv("data/tickers_stock.csv") %>% 
+#   query_ticker_data() %>% 
+#   create_ta_columns()
+# Sys.time()
+run_db_update() # <5 min (compared to 10-15min in R)
+
+e <- query_db("
+  SELECT e.ticker, e.description as desc, e.e_type as type, e.category, e.category2, 
+  p.date, p.open, p.high, p.low, p.close, p.volume, p.rsi, p.ma_20, p.ma_50, p.ma_200
+  FROM etfs as e
+  LEFT JOIN prices_w_ma as p
+  ON e.ticker = p.ticker
+  WHERE date > '2024-01-01'
+")
+
+s <- query_db("
+  SELECT s.ticker, s.company, s.sector, s.industry, s.size,
+  p.date, p.open, p.high, p.low, p.close, p.volume, p.rsi, p.ma_20, p.ma_50, p.ma_200
+  FROM stocks as s
+  LEFT JOIN prices_w_ma as p
+  ON s.ticker = p.ticker
+  WHERE date > '2024-01-01'
+")
 
 etfs <- clean_data(e, desc, type, category, category2)
 stocks <- clean_data(s, company, sector, industry, size)

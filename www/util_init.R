@@ -17,15 +17,6 @@ anchor_msg <- anchor_1_msg
 ### general functions ###
 pdiff <- function(x, base) round((x-base)/base, 3) 
 
-clean_ticker <- function(ticker){
-  plyr::mapvalues(
-    ticker, # ticker transcription if needed
-    c("BRKB", "BRKB", "MOG.A", "BF.B"), 
-    c("BRK-B", "BRK.B", "MOG-A", "BF-B"), 
-    warn_missing = FALSE
-  )
-}
-
 price_on_date <- function(dat, dt, type = "close"){
   val <- dat %>% 
     dplyr::filter(date >=  dt) %>% 
@@ -102,39 +93,18 @@ run_db_update <- function(){
   add_to_price_db(d_ready_upload)
 }
 
+query_db <- function(query, db = "data/stock_prices.db"){
+  db_conn <- DBI::dbConnect(duckdb::duckdb(), db)
+  tryCatch({
+    DBI::dbGetQuery(db_conn, query)
+  }, 
+  finally = {
+    DBI::dbDisconnect(db_conn)
+  })
+}
+
 
 ### data creation ###
-query_ticker_data <- function(dat){
-  
-  d0 <- dat$ticker %>% 
-    clean_ticker() %>% 
-    tidyquant::tq_get(from = "2019-01-01") %>% 
-    dplyr::rename(ticker = symbol)
-  
-  dplyr::full_join(dat, d0, "ticker")
-}
-
-create_ta_columns <- function(dat){
-  dat %>% 
-    tidyr::nest(data = -ticker) %>% 
-    dplyr::mutate(
-      data = purrr::map(data, function(d){
-        tryCatch({
-          d %>% 
-            dplyr::mutate(
-              rsi = TTR::RSI(close, n = 14),
-              ma_20 = TTR::SMA(close, 20),
-              ma_50 = TTR::SMA(close, 50),
-              ma_200 = TTR::SMA(close, 200)
-            )
-        }, error = function(e){
-          dplyr::mutate(d, rsi = NA, ma_20 = NA, ma_50 = NA, ma_200 = NA)
-        })
-      })
-    ) %>% 
-    tidyr::unnest(data)
-}
-
 create_price_columns <- function(dat, anchor_1, anchor_2){
   
   dat_sub_1y <- tail(dat, 252) # 1y
