@@ -11,11 +11,11 @@ def get_price_db(year, db = "data/stock_prices.db"):
 
   out = (None, None, None)
   try:
-    df = pd.read_sql(query, db_conn)
+    df = db_conn.sql(query).df()
     tickers = df.ticker.unique().tolist() 
     query_date0 = df.groupby("ticker")["date"].max().min() 
-    query_date = (query_date0 - datetime.timedelta(weeks = 5)).strftime("%Y-%m-%d") # to calc rsi
-    d_old = df[df.date >= datetime.datetime.strptime(query_date, "%Y-%m-%d").date()][["ticker", "date"]]
+    query_date = (query_date0 - datetime.timedelta(weeks = 26)).strftime("%Y-%m-%d") # to calc rsi
+    d_old = df[df.date.dt.date >= datetime.datetime.strptime(query_date, "%Y-%m-%d").date()][["ticker", "date"]]
     d_old["date"] = d_old.date.astype(str)
     out = (d_old, tickers, query_date)
     print("Data Extracted")
@@ -46,15 +46,13 @@ def query_ticker_data(tickers, query_date):
 
 # stagger calls to api so not rate limited
 def get_updated_prices(tickers, query_date):
-
   d1 = query_ticker_data(tickers[:800], query_date)
   time.sleep(180) # rest for api call
   d2 = query_ticker_data(tickers[800:], query_date)
-
   return pd.concat([d1, d2])
 
 
 # run
-yr_3m_ago = str((datetime.datetime.now() - datetime.timedelta(weeks = 12)).year)
+yr_1y_ago = str((datetime.datetime.now() - datetime.timedelta(weeks = 52)).year)
 d_old, tickers, query_date = get_price_db(yr_3m_ago)
 d_out = get_updated_prices(tickers, query_date)
