@@ -5,6 +5,7 @@ source("www/db_executions.R")
 
 today <- Sys.Date()
 year_start <- "2025-01-02"
+use_db <- "data/stock_prices.db"
 
 # note this may change
 anchor_1 <- "2024-12-04"
@@ -77,7 +78,7 @@ prep_for_db_upload <- function(dat, d_old){
     dplyr::filter(!is.na(close))
 }
 
-add_to_price_db <- function(dat, db = "data/stock_prices.db"){
+add_to_price_db <- function(dat, db = use_db){
   db_conn <- DBI::dbConnect(duckdb::duckdb(), db)
   tryCatch({
     DBI::dbWriteTable(db_conn, "prices", dat, append = TRUE)
@@ -94,7 +95,7 @@ run_db_update <- function(){
   add_to_price_db(d_ready_upload)
 }
 
-execute_in_db <- function(query, db = "data/stock_prices.db"){
+execute_in_db <- function(query, db = use_db){
   db_conn <- DBI::dbConnect(duckdb::duckdb(), db)
   tryCatch({
     DBI::dbExecute(db_conn, query)
@@ -104,17 +105,17 @@ execute_in_db <- function(query, db = "data/stock_prices.db"){
   })
 }
 
-add_view_avwap <- function(dt_name, dt, db = "data/stock_prices.db"){
+add_view_avwap <- function(dt_name, dt, db = use_db){
   query <- stringr::str_glue(view_creation['avwap'])
   execute_in_db(query, db = db)
 }
 
-add_view_price_anchor <- function(dt_name, dt, db = "data/stock_prices.db"){
+add_view_price_anchor <- function(dt_name, dt, db = use_db){
   query <- stringr::str_glue(view_creation['price_anchor'])
   execute_in_db(query, db = db)
 }
 
-query_db <- function(query, db = "data/stock_prices.db"){
+query_db <- function(query, db = use_db){
   db_conn <- DBI::dbConnect(duckdb::duckdb(), db)
   tryCatch({
     DBI::dbGetQuery(db_conn, query)
