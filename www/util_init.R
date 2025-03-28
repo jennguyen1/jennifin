@@ -8,10 +8,10 @@ year_start <- "2025-01-02"
 use_db <- "data/stock_prices.db"
 
 # note this may change
-anchor_1 <- "2024-12-04"
-anchor_2 <- "2024-10-31"
-anchor_1_msg <- "Dec High"
-anchor_2_msg <- "Oct Low"
+anchor_1 <- "2025-02-19"
+anchor_2 <- "2025-03-13"
+anchor_1_msg <- "Feb High"
+anchor_2_msg <- "Mar Low"
 anchor_msg <- anchor_1_msg
 
 
