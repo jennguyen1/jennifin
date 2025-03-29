@@ -275,7 +275,7 @@ shinyServer(function(input, output) {
   })
   
   output$graph_obos <- renderPlot({
-    graph_obos(s)
+    graph_obos(past_years = 2) 
   })
   
   output$graph_gex <- renderPlot({

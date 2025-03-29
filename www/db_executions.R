@@ -124,7 +124,7 @@ CREATE VIEW obos AS(
     prices.date,
     AVG(CASE WHEN prices.rsi IS NULL THEN NULL WHEN prices.rsi <= 30 THEN 1 ELSE 0 END)*100 as os,
     AVG(CASE WHEN prices.rsi IS NULL THEN NULL WHEN prices.rsi >= 70 THEN 1 ELSE 0 END)*100 as ob,
-    COUNT(prices.ticker)
+    COUNT(prices.ticker) as count
   FROM prices 
   RIGHT JOIN stocks
     ON stocks.ticker = prices.ticker

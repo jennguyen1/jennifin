@@ -591,23 +591,10 @@ graph_ytd_distribution <- function(stocks, etfs){
     )
 }
 
-graph_obos_1 <- function(dat, dt){
-  dat %>%
-    dplyr::filter(date == dt) %>%
-    dplyr::group_by(date) %>%
-    dplyr::summarise(
-      Overbought = mean(rsi >= 70, na.rm = TRUE),
-      Oversold = mean(rsi <= 30, na.rm = TRUE)
-    )
-}
-
 graph_obos <- function(dat, past_years = 2){
-  dates <- dat %>%
-    distinct(date) %>%
-    subset(year(date) >= (year(today)-past_years) & wday(date) %in% c(2,4,6)) %>%
-    pull(date)
-  
-  plot_data <- purrr::map_dfr(dates, ~ graph_obos_1(s, .x)) %>% 
+  yr <- year(Sys.Date()) - past_years
+  plot_data <- stringr::str_glue("SELECT date, ob, os FROM obos WHERE date >= '{yr}-01-01'")%>% 
+    query_db() %>% 
     tidyr::pivot_longer(-date)
   
   plot_data %>% 
