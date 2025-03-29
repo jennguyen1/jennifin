@@ -6,6 +6,7 @@ today <- Sys.Date()
 source("www/util_init.R")
 etfs <- get_data("etfs")
 stocks <- get_data("stocks")
+sectors <- query_db("SELECT * from sectors")
 stocks_ta_screen <- apply_technical_screen(stocks, etfs)
 # collect_ta_stats(stocks = stocks, stocks_ta = stocks_ta_screen, date = get_latest_date()) todo
 

@@ -154,7 +154,7 @@ shinyServer(function(input, output) {
           colnames(.) %>% 
             stringr::str_to_title() %>% 
             plyr::mapvalues(., 
-              c("Return_anchor_1", "Return_avwap_anchor_1", "Return_avwap_ytd", "Days_since_os", "Return_above_52w_lo", "Return_below_52w_hi"), 
+              c("Return_anchor_1", "Return_avwap_anchor_1", "Return_avwap_ytd", "Days_since_os", "Return_52w_lo", "Return_52w_hi"), 
               c(paste(anchor_msg, "%"), paste(anchor_msg, "AVWAP %"), "YTD AVWAP %","Days Since OS", "% Above 52W Low", "% Below 52W High")
             )
         ) %>% 
@@ -300,24 +300,19 @@ shinyServer(function(input, output) {
   })
   
   output$graph_hilo_sector <- renderPlot({ 
-    
-    grp <- stocks %>% 
-      dplyr::distinct(sector) %>% 
-      dplyr::arrange(sector) %>% 
-      dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "defensive", "growth", "defensive"))
-    
+
     plot_df_a <- stocks %>% 
-      dplyr::left_join(grp, "sector") %>% 
-      dplyr::group_by(group, sector) %>% 
-      dplyr::summarise(p = mean(abs(return_below_52w_hi) < abs(return_above_52w_lo), na.rm = TRUE)*100) %>% 
+      dplyr::left_join(sectors, "sector") %>% 
+      dplyr::group_by(category, sector) %>% 
+      dplyr::summarise(p = mean(abs(return_52w_hi) < abs(return_52w_lo), na.rm = TRUE)*100) %>% 
       dplyr::ungroup() 
     
     plot_df <- stocks %>% 
       dplyr::group_by(size) %>% 
-      dplyr::summarise(p = mean(abs(return_below_52w_hi) < abs(return_above_52w_lo), na.rm = TRUE)*100) %>% 
+      dplyr::summarise(p = mean(abs(return_52w_hi) < abs(return_52w_lo), na.rm = TRUE)*100) %>% 
       dplyr::ungroup() %>% 
       dplyr::mutate(
-        group = "all", 
+        category = "all", 
         sector = plyr::mapvalues(size, c("SML", "MID", "LRG"), c("SP600", "SP400", "SP500")), 
         size = NULL
       ) %>% 
@@ -325,7 +320,7 @@ shinyServer(function(input, output) {
       dplyr::mutate(sector = forcats::fct_reorder(sector, p))  
       
     plot_df %>% 
-      ggplot(aes(sector, p, fill = group)) +
+      ggplot(aes(sector, p, fill = category)) +
       geom_bar(stat = "identity", color = "black") +
       scale_y_continuous(limits = c(0, 100)) +
       scale_fill_manual(values = c("grey70", "limegreen", "tomato", "dodgerblue")) +

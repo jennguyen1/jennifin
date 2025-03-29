@@ -121,13 +121,13 @@ graph_lead_lag <- function(dat, sub = NULL, ...){
   
   graph_data <- graph_data0 %>% 
     dplyr::mutate(
-      return_above_52w_lo = round(return_above_52w_lo*100, 1),
-      return_below_52w_hi = round(return_below_52w_hi*100, 1)
+      return__52w_lo = round(return__52w_lo*100, 1),
+      return__52w_hi = round(return__52w_hi*100, 1)
     )
   
   # scales
-  xmax <- ceiling( max(graph_data$return_above_52w_lo, na.rm = TRUE) / 10 ) * 10 + 10
-  ymin <- floor( min(graph_data$return_below_52w_hi, na.rm = TRUE) / 10 ) * 10 - 5
+  xmax <- ceiling( max(graph_data$return__52w_lo, na.rm = TRUE) / 10 ) * 10 + 10
+  ymin <- floor( min(graph_data$return__52w_hi, na.rm = TRUE) / 10 ) * 10 - 5
   
   # shading region
   fill_green <- data.frame(x = seq(0, xmax, 5)) %>% dplyr::mutate(y = 0 - 0.25*x)
@@ -142,9 +142,9 @@ graph_lead_lag <- function(dat, sub = NULL, ...){
     geom_vline(xintercept = 0, color = "grey80")
   
   g <- if( is.null(col) ){
-    g + geom_text(aes(return_above_52w_lo, return_below_52w_hi, label = ticker)) 
+    g + geom_text(aes(return__52w_lo, return__52w_hi, label = ticker)) 
   } else{
-    g + geom_text(aes(return_above_52w_lo, return_below_52w_hi, label = ticker, ...))
+    g + geom_text(aes(return__52w_lo, return__52w_hi, label = ticker, ...))
   }
   
   g +
@@ -189,8 +189,8 @@ tabulate_performance_etfs <- function(dat, sub = NULL){
       "YTD AVWAP %" = "return_avwap_ytd",
       "50D %" = "return_50d",
       "200D %" = "return_200d",
-      'Above 52W Low' = 'return_above_52w_lo',
-      "Below 52W High" = "return_below_52w_hi"
+      'Above 52W Low' = 'return__52w_lo',
+      "Below 52W High" = "return__52w_hi"
     ),  
     class = 'cell-border compact hover',
     filter = 'bottom',
@@ -313,14 +313,10 @@ graph_ma_uptrend_by_group <- function(past_years = 2){
 }
 
 graph_ma_by_sector <- function(dat){
-  grp <- dat %>% 
-    dplyr::distinct(sector) %>% 
-    dplyr::arrange(sector) %>% 
-    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "defensive", "growth", "defensive"))
-  
+
   df <- dat %>% 
-    dplyr::left_join(grp, "sector") %>% 
-    dplyr::select(ticker, sector, group, size, ends_with("d")) %>% 
+    dplyr::left_join(sectors, "sector") %>% 
+    dplyr::select(ticker, sector, category, size, ends_with("d")) %>% 
     dplyr::mutate(dplyr::across(dplyr::ends_with("d"), \(x) x > 0))
   
   sdf <- df %>% # by size
@@ -329,18 +325,18 @@ graph_ma_by_sector <- function(dat){
       dplyr::matches("\\dd$"),
       \(x) mean(x, na.rm = TRUE)
     )) %>% 
-    dplyr::mutate(group = "all") %>% 
+    dplyr::mutate(category = "all") %>% 
     dplyr::rename(sector = size)
   
   adf <- df %>% # by sector
-    dplyr::group_by(group, sector) %>% 
+    dplyr::group_by(category, sector) %>% 
     dplyr::summarise(dplyr::across(
       dplyr::matches("\\dd$"),
       \(x) mean(x, na.rm = TRUE)
     ))
   
   plot_df <- dplyr::bind_rows(sdf, adf) %>% 
-    tidyr::pivot_longer(-c(group, sector)) %>% 
+    tidyr::pivot_longer(-c(category, sector)) %>% 
     dplyr::mutate(
       days = factor(readr::parse_number(name)),
       sector = plyr::mapvalues(
@@ -348,7 +344,7 @@ graph_ma_by_sector <- function(dat){
         c("Consumer Staples", "Communication Services", "Consumer Discretionary"), 
         c("Staples", "Communications", "Discretionary")
       ),
-      group = factor(stringr::str_to_title(group), levels = c("All", "Growth", "Cyclical", "Defensive"))
+      category = factor(stringr::str_to_title(category), levels = c("All", "Growth", "Cyclical", "Defensive"))
     ) 
   
   plot_df %>% 
@@ -361,7 +357,7 @@ graph_ma_by_sector <- function(dat){
       aes(3.1, value*100, label = sector, color = sector),
       hjust = 0, direction = "y", segment.color = NA
     ) +
-    facet_grid(~group) + 
+    facet_grid(~category) + 
     scale_y_continuous(breaks = seq(0, 100, 10)) + 
     scale_color_manual(values = c(
       "deepskyblue", "dodgerblue", "darkgreen", "yellowgreen", "red", "green3", "black", 
@@ -377,14 +373,10 @@ graph_ma_by_sector <- function(dat){
 }
 
 graph_ma_uptrend_sector <- function(dat){ # (1) >50d (2) >200d (3) 50d > 200d
-  grp <- dat %>% 
-    dplyr::distinct(sector) %>% 
-    dplyr::arrange(sector) %>% 
-    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "defensive", "growth", "defensive"))
   
   plot_df_a <- dat %>% 
-    dplyr::left_join(grp, "sector") %>% 
-    dplyr::group_by(group, sector) %>% 
+    dplyr::left_join(sectors, "sector") %>% 
+    dplyr::group_by(category, sector) %>% 
     dplyr::summarise(p = mean(return_50d > 0 & return_200d > 0 & return_50d < return_200d, na.rm = TRUE)*100) %>% 
     dplyr::ungroup() 
   
@@ -393,7 +385,7 @@ graph_ma_uptrend_sector <- function(dat){ # (1) >50d (2) >200d (3) 50d > 200d
     dplyr::summarise(p = mean(return_50d > 0 & return_200d > 0 & return_50d < return_200d, na.rm = TRUE)*100) %>% 
     dplyr::ungroup() %>% 
     dplyr::mutate(
-      group = "all", 
+      category = "all", 
       sector = plyr::mapvalues(size, c("SML", "MID", "LRG"), c("SP600", "SP400", "SP500")), 
       size = NULL
     ) %>% 
@@ -408,7 +400,7 @@ graph_ma_uptrend_sector <- function(dat){ # (1) >50d (2) >200d (3) 50d > 200d
     )  
   
   plot_df %>% 
-    ggplot(aes(sector, p, fill = group)) +
+    ggplot(aes(sector, p, fill = category)) +
     geom_bar(stat = "identity", color = "black") +
     scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 10)) +
     scale_fill_manual(values = c("grey70", "limegreen", "tomato", "dodgerblue")) +
@@ -436,7 +428,7 @@ graph_price_avwap_1 <- function(dat, anchor, anchor_label, variable){
       sector = factor(sector, levels = plot_order), 
       label = anchor_label
     ) %>% 
-    ggplot(aes(sector, p, color = group)) +
+    ggplot(aes(sector, p, color = category)) +
     geom_point(aes(shape = var), size = 3, stroke = 1) + 
     geom_line(size = 1, alpha = 0.5) + 
     facet_grid(~label) +
@@ -456,14 +448,9 @@ graph_price_avwap_1 <- function(dat, anchor, anchor_label, variable){
 
 graph_price_avwap <- function(dat, var = "Price"){
   
-  grp <- dat %>% 
-    dplyr::distinct(sector) %>% 
-    dplyr::arrange(sector) %>% 
-    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "defensive", "growth", "defensive"))
-  
   plot_df_a <- dat %>% 
-    dplyr::left_join(grp, "sector") %>% 
-    dplyr::group_by(group, sector) %>% 
+    dplyr::left_join(sectors, "sector") %>% 
+    dplyr::group_by(category, sector) %>% 
     dplyr::summarise(
       p_anchor_1 = mean(return_anchor_1 > 0, na.rm = TRUE) * 100,
       p_anchor_2 = mean(return_anchor_2 > 0, na.rm = TRUE) * 100,
@@ -484,7 +471,7 @@ graph_price_avwap <- function(dat, var = "Price"){
     ) %>% 
     dplyr::ungroup() %>% 
     dplyr::mutate(
-      group = "all", 
+      category = "all", 
       sector = plyr::mapvalues(size, c("SML", "MID", "LRG"), c("SP600", "SP400", "SP500")), 
       size = NULL
     ) %>% 
@@ -508,14 +495,10 @@ graph_price_avwap <- function(dat, var = "Price"){
 }
 
 graph_ma_downtrend_sector <- function(dat){ # (1) <50d (2) <200d (3) 50d < 200d
-  grp <- dat %>% 
-    dplyr::distinct(sector) %>% 
-    dplyr::arrange(sector) %>% 
-    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "defensive", "growth", "defensive"))
-  
+
   plot_df_a <- dat %>% 
-    dplyr::left_join(grp, "sector") %>% 
-    dplyr::group_by(group, sector) %>% 
+    dplyr::left_join(sectors, "sector") %>% 
+    dplyr::group_by(category, sector) %>% 
     dplyr::summarise(p = mean(return_50d < 0 & return_200d < 0 & return_50d > return_200d, na.rm = TRUE)*100) %>% 
     dplyr::ungroup() 
   
@@ -524,7 +507,7 @@ graph_ma_downtrend_sector <- function(dat){ # (1) <50d (2) <200d (3) 50d < 200d
     dplyr::summarise(p = mean(return_50d < 0 & return_200d < 0 & return_50d > return_200d, na.rm = TRUE)*100) %>% 
     dplyr::ungroup() %>% 
     dplyr::mutate(
-      group = "all", 
+      category = "all", 
       sector = plyr::mapvalues(size, c("SML", "MID", "LRG"), c("SP600", "SP400", "SP500")), 
       size = NULL
     ) %>% 
@@ -539,7 +522,7 @@ graph_ma_downtrend_sector <- function(dat){ # (1) <50d (2) <200d (3) 50d < 200d
     )  
   
   plot_df %>% 
-    ggplot(aes(sector, p, fill = group)) +
+    ggplot(aes(sector, p, fill = category)) +
     geom_bar(stat = "identity", color = "black") +
     scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 10)) +
     scale_fill_manual(values = c("grey70", "limegreen", "tomato", "dodgerblue")) +
