@@ -35,6 +35,13 @@ CREATE TABLE prices(
 ",
 price_index = "
 CREATE UNIQUE INDEX prices_index ON prices(ticker, date);
+",
+sectors = "
+CREATE TABLE sectors(
+  sector TEXT NOT NULL,
+  category TEXT NOT NULL,
+  PRIMARY KEY(sector)
+);
 "
 )
 
