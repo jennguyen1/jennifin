@@ -121,10 +121,13 @@ CREATE VIEW since_ob AS(
 obos = "
 CREATE VIEW obos AS(
   SELECT 
-    date,
-    AVG(CASE WHEN rsi IS NULL THEN NULL WHEN rsi <= 30 THEN 1 ELSE 0 END)*100 as os,
-    AVG(CASE WHEN rsi IS NULL THEN NULL WHEN rsi >= 70 THEN 1 ELSE 0 END)*100 as ob,
+    prices.date,
+    AVG(CASE WHEN prices.rsi IS NULL THEN NULL WHEN prices.rsi <= 30 THEN 1 ELSE 0 END)*100 as os,
+    AVG(CASE WHEN prices.rsi IS NULL THEN NULL WHEN prices.rsi >= 70 THEN 1 ELSE 0 END)*100 as ob,
+    COUNT(prices.ticker)
   FROM prices 
+  RIGHT JOIN stocks
+    ON stocks.ticker = prices.ticker
   GROUP BY date
 );
 ",
