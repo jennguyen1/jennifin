@@ -251,7 +251,7 @@ graph_ma_uptrend_by_group <- function(past_years = 2){
   df <- query_db(stringr::str_glue("
     SELECT 
       s.ticker, s.company, s.sector, s.industry, s.size, sectors.category,
-      p.date, p.open, p.high, p.low, p.close, p.volume, p.rsi, p.price_20d, p.price_50d, p.price_200d
+      p.date, p.close, p.price_20d, p.price_50d, p.price_200d
     FROM stocks as s
     LEFT JOIN price_stats as p
       ON s.ticker = p.ticker
