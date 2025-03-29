@@ -3,8 +3,7 @@ source("www/db_executions.R")
 
 ## some date stuff ##
 
-today <- Sys.Date()
-year_start <- "2025-01-02"
+today <- Sys.Date() # todo
 use_db <- "data/stock_prices.db"
 
 # note this may change
@@ -17,6 +16,10 @@ anchor_msg <- anchor_1_msg
 
 ### general functions ###
 pdiff <- function(x, base) round((x-base)/base, 3) 
+
+get_latest_date <- function(){
+  query_db("SELECT MAX(date) as date FROM prices WHERE ticker = 'SPY'")$date
+}
 
 
 ### db update ###
@@ -83,13 +86,26 @@ query_db <- function(query, db = use_db){
 }
 
 ### data creation ###
-clean_data <- function(dat, ...){
+convert_to_return <- function(dat){
   dat %>% 
     dplyr::mutate(dplyr::across(
       dplyr::starts_with("price_"), 
       function(x) pdiff(price, x)
     )) %>% 
     purrr::set_names(colnames(.) %>% stringr::str_replace("price_", "return_"))
+}
+
+get_data <- function(table, pull_date){
+  assertthat::assert_that(table %in% c("etfs", "stocks"))
+  
+  pull_date <- get_latest_date()
+  specific_columns <- if(table == "etfs"){
+    "etfs.ticker, etfs.description as desc, etfs.e_type as type, etfs.category, etfs.category2"
+  } else if(table == "stocks"){
+    "stocks.ticker, stocks.company, stocks.sector, stocks.industry, stocks.size"
+  }
+  
+  query_db(stringr::str_glue(assemble_data)) %>% convert_to_return()
 }
 
 apply_technical_screen <- function(dat, etfs){
@@ -133,10 +149,10 @@ apply_technical_screen <- function(dat, etfs){
     )
   
   # sort by 52w highs
-  d2 %>% dplyr::arrange(dplyr::desc(return_below_52w_hi))
+  d2 %>% dplyr::arrange(dplyr::desc(return_52w_hi))
 }
 
-
+# todo
 ### data collection ### 
 collect_ta_stats <- function(stocks, stocks_ta, date){
   

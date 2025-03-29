@@ -15,7 +15,7 @@ header <- dashboardHeader(
   title = "jennifin",
   dropdownMenu(
     type = "notifications", 
-    icon = paste("Updated as of Market Close", get_file_update_dt()),
+    icon = paste("Updated as of Market Close", get_latest_date()),
     headerText = "",
     badgeStatus = NULL
   )

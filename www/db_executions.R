@@ -153,3 +153,40 @@ CREATE VIEW price_anchor_{dt_name} AS(
 "
 )
 
+assemble_data <- "
+WITH d1d AS(
+  SELECT 
+    a1.ticker, a1.close as price_anchor_1, a2.close as price_anchor_2,
+    ob.days_since_ob, os.days_since_os
+  FROM price_anchor_1 a1
+  FULL JOIN price_anchor_2 as a2
+    ON a1.ticker = a2.ticker
+  FULL JOIN since_ob as ob
+    ON a1.ticker = ob.ticker
+  FULL JOIN since_os as os
+    ON a1.ticker = os.ticker
+)
+SELECT 
+  {specific_columns},
+  p.date, p.open, p.high, p.low, p.close as price, p.volume, p.rsi, 
+  p.price_20d, p.price_50d, p.price_200d, 
+  p.price_52w_lo, p.price_52w_hi, p.price_ytd,
+  p.price_1m, p.price_3m, p.price_6m, p.price_12m,
+  ava1.avwap as price_avwap_anchor_1, ava2.avwap as price_avwap_anchor_2, 
+  avay.avwap as price_avwap_ytd,
+  d1d.price_anchor_1, d1d.price_anchor_2, 
+  d1d.days_since_ob, d1d.days_since_os
+FROM {table} 
+LEFT JOIN price_stats as p
+  ON {table}.ticker = p.ticker
+LEFT JOIN avwap_anchor_1 as ava1
+  ON p.ticker = ava1.ticker AND p.date = ava1.date
+LEFT JOIN avwap_anchor_2 as ava2
+  ON p.ticker = ava2.ticker AND p.date = ava2.date
+LEFT JOIN avwap_anchor_ytd as avay
+  ON p.ticker = avay.ticker AND p.date = avay.date
+LEFT JOIN d1d
+  ON p.ticker = d1d.ticker
+WHERE p.date = '{pull_date}'
+;
+"
