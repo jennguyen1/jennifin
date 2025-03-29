@@ -18,49 +18,6 @@ anchor_msg <- anchor_1_msg
 ### general functions ###
 pdiff <- function(x, base) round((x-base)/base, 3) 
 
-price_on_date <- function(dat, dt, type = "close"){
-  val <- dat %>% 
-    dplyr::filter(date >=  dt) %>% 
-    head(1) %>% 
-    .[ , type, drop = TRUE]
-  
-  ifelse(length(val) == 0, NA, val)
-}
-
-price_on_ytd <- function(dat){
-  dat %>% 
-    dplyr::filter(year(date) < year(today)) %>%  
-    tail(1) %>% 
-    dplyr::pull(close)
-}
-
-calculate_avwap <- function(dat, dt){
-  dat %>% 
-    dplyr::filter(date >= dt) %>% 
-    dplyr::mutate(
-      price = (open+high+low+close)/4, 
-      num = cumsum(price * volume),
-      den = cumsum(volume),
-      avwap = num/den 
-    ) %>% 
-    dplyr::pull(avwap) %>% 
-    tail(1)
-}
-
-get_rsi_stats <- function(dat){
-
-  rsi <- dat %>% 
-    dplyr::arrange(dplyr::desc(date)) %>% 
-    dplyr::select(date, rsi) %>% 
-    dplyr::pull(rsi) 
-  
-  data.frame(
-    rsi = rsi[1],
-    days_since_os = dplyr::coalesce(which(rsi < 30)[1] - 1, 252),
-    days_since_ob = dplyr::coalesce(which(rsi > 70)[1] - 1, 252)
-  )
-}
-
 
 ### db update ###
 prep_for_db_upload <- function(dat, d_old){
@@ -126,47 +83,8 @@ query_db <- function(query, db = use_db){
 }
 
 ### data creation ###
-create_price_columns <- function(dat, anchor_1, anchor_2){
-  
-  dat_sub_1y <- tail(dat, 252) # 1y
-  
-  out <- dat_sub_1y %>% 
-    dplyr::summarise(
-      price = tail(.$close, 1),
-      # hi/lo
-      price_above_52w_lo = min(low), 
-      price_below_52w_hi = max(high),
-      # ma
-      price_200d = tail(.$ma_200, 1), 
-      price_50d = tail(.$ma_50, 1), 
-      price_20d = tail(.$ma_20, 1), 
-      # price from date
-      price_1m = price_on_date(., today - days(31)),
-      price_3m = price_on_date(., today - days(91)),
-      price_6m = price_on_date(., today - days(181)),
-      price_12m = price_on_date(., today - days(366)),
-      price_ytd = price_on_ytd(.),
-      # price anchors
-      price_anchor_1 = price_on_date(dat, anchor_1), 
-      price_anchor_2 = price_on_date(dat, anchor_2), 
-      price_avwap_anchor_1 = calculate_avwap(dat, anchor_1),
-      price_avwap_anchor_2 = calculate_avwap(dat, anchor_2),
-      price_avwap_ytd = calculate_avwap(dat, year_start)
-    )
-  
-  rsi <- get_rsi_stats(dat_sub_1y)
-  
-  # combine
-  dplyr::bind_cols(out, rsi)
-}
-
 clean_data <- function(dat, ...){
-  
   dat %>% 
-    tidyr::nest(data = -c(ticker, ...)) %>% 
-    dplyr::mutate(res = purrr::map(data, create_price_columns, anchor_1 = anchor_1, anchor_2 = anchor_2)) %>% 
-    tidyr::unnest(res) %>% 
-    dplyr::select(-data) %>% 
     dplyr::mutate(dplyr::across(
       dplyr::starts_with("price_"), 
       function(x) pdiff(price, x)
@@ -196,7 +114,7 @@ apply_technical_screen <- function(dat, etfs){
   ) %>% 
     dplyr::left_join(etfs, "ticker") %>% 
     dplyr::select(sector, return_1m)
-
+  
   # initial filter based 50D/200D uptrend, S/R, RS to spy / sector
   d1 <- dat %>% 
     dplyr::filter(return_50d > 0 & return_200d > 0 & return_50d < return_200d) %>%  # keep above 50d & 200d SMA and 50d SMA > 200d SMA
@@ -213,7 +131,7 @@ apply_technical_screen <- function(dat, etfs){
       days_since_os, 
       dplyr::matches("52")
     )
-
+  
   # sort by 52w highs
   d2 %>% dplyr::arrange(dplyr::desc(return_below_52w_hi))
 }
@@ -332,3 +250,18 @@ animate_breadth <- function(dat){
   system("ffmpeg -i www/ma_breadth.gif -movflags faststart -pix_fmt yuv420p -vf 'scale=trunc(iw/2)*2:trunc(ih/2)*2' www/ma_breadth.mp4")
   file.remove("www/ma_breadth.gif")
 }
+
+
+### update tables on anchor date changes ###
+
+# # price anchor 1&2
+# add_view_price_anchor("1", anchor_1)
+# add_view_price_anchor("2", anchor_2)
+# 
+# # avwap anchor 1&2
+# add_view_avwap("1", anchor_1)
+# add_view_avwap("2", anchor_2)
+# 
+# # avwap anchor ytd
+# add_view_avwap("ytd", "2025-01-01")
+

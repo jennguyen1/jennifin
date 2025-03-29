@@ -84,9 +84,42 @@ CREATE VIEW price_stats AS(
   ON p.ticker = ytd.ticker AND p.year = ytd.year
 );
 ",
+# OB/OS days since
+since_os = "
+CREATE VIEW since_os AS(
+  WITH last_o AS(
+    SELECT ticker, MAX(date) as dto 
+    FROM prices 
+    WHERE rsi < 30
+    GROUP BY ticker
+  )
+  SELECT prices.ticker, count(*) as days_since_os
+  FROM prices
+  LEFT JOIN last_o
+  ON prices.ticker = last_o.ticker
+  WHERE prices.date > last_o.dto
+  GROUP BY prices.ticker
+);
+",
+since_ob = "
+CREATE VIEW since_ob AS(
+  WITH last_o AS(
+    SELECT ticker, MAX(date) as dto 
+    FROM prices 
+    WHERE rsi >70
+    GROUP BY ticker
+  )
+  SELECT prices.ticker, count(*) as days_since_ob
+  FROM prices
+  LEFT JOIN last_o
+  ON prices.ticker = last_o.ticker
+  WHERE prices.date > last_o.dto
+  GROUP BY prices.ticker
+);
+",
 # OB/OS Perc
 obos = "
-CREATE VIEW obos(
+CREATE VIEW obos AS(
   SELECT 
     date,
     AVG(CASE WHEN rsi IS NULL THEN NULL WHEN rsi <= 30 THEN 1 ELSE 0 END)*100 as os,
@@ -119,5 +152,4 @@ CREATE VIEW price_anchor_{dt_name} AS(
 );
 "
 )
-
 
