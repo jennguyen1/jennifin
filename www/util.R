@@ -121,13 +121,13 @@ graph_lead_lag <- function(dat, sub = NULL, ...){
   
   graph_data <- graph_data0 %>% 
     dplyr::mutate(
-      return__52w_lo = round(return__52w_lo*100, 1),
-      return__52w_hi = round(return__52w_hi*100, 1)
+      return_52w_lo = round(return_52w_lo*100, 1),
+      return_52w_hi = round(return_52w_hi*100, 1)
     )
   
   # scales
-  xmax <- ceiling( max(graph_data$return__52w_lo, na.rm = TRUE) / 10 ) * 10 + 10
-  ymin <- floor( min(graph_data$return__52w_hi, na.rm = TRUE) / 10 ) * 10 - 5
+  xmax <- ceiling( max(graph_data$return_52w_lo, na.rm = TRUE) / 10 ) * 10 + 10
+  ymin <- floor( min(graph_data$return_52w_hi, na.rm = TRUE) / 10 ) * 10 - 5
   
   # shading region
   fill_green <- data.frame(x = seq(0, xmax, 5)) %>% dplyr::mutate(y = 0 - 0.25*x)
@@ -142,9 +142,9 @@ graph_lead_lag <- function(dat, sub = NULL, ...){
     geom_vline(xintercept = 0, color = "grey80")
   
   g <- if( is.null(col) ){
-    g + geom_text(aes(return__52w_lo, return__52w_hi, label = ticker)) 
+    g + geom_text(aes(return_52w_lo, return_52w_hi, label = ticker)) 
   } else{
-    g + geom_text(aes(return__52w_lo, return__52w_hi, label = ticker, ...))
+    g + geom_text(aes(return_52w_lo, return_52w_hi, label = ticker, ...))
   }
   
   g +
@@ -189,8 +189,8 @@ tabulate_performance_etfs <- function(dat, sub = NULL){
       "YTD AVWAP %" = "return_avwap_ytd",
       "50D %" = "return_50d",
       "200D %" = "return_200d",
-      'Above 52W Low' = 'return__52w_lo',
-      "Below 52W High" = "return__52w_hi"
+      'Above 52W Low' = 'return_52w_lo',
+      "Below 52W High" = "return_52w_hi"
     ),  
     class = 'cell-border compact hover',
     filter = 'bottom',
