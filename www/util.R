@@ -73,9 +73,9 @@ create_display_row <- function(get_ticker, etfs, stocks){
       ticker,
       dplyr::matches("components_\\d+d"), 
       return_50d, return_200d, ma_50d_200d,
-      return_avwap_ytd, 
-      p_components_avwap_anchor_1, return_avwap_anchor_1, p_components_anchor_1, return_anchor_1,
-      p_components_avwap_anchor_2, return_avwap_anchor_2, p_components_anchor_2, return_anchor_2
+      return_ytd, return_avwap_ytd, 
+      p_components_anchor_1, return_anchor_1, p_components_avwap_anchor_1, return_avwap_anchor_1, 
+      p_components_anchor_2, return_anchor_2, p_components_avwap_anchor_2, return_avwap_anchor_2
     ) %>% 
     dplyr::rename_with(~ plyr::mapvalues(., 
                          c("p_components_anchor_1", "return_anchor_1", "p_components_avwap_anchor_1", "return_avwap_anchor_1", 
@@ -213,7 +213,7 @@ display_table_summary <- function(etfs, stocks){
     c("SPY", "IJH", "IJR", "XLF", "XLI", "XLB", "XLE", "XLY", "XLK", "XLC", "XLRE", "XLP", "XLU", "XLV", "EFA", "EEM"), 
     create_display_row, etfs, stocks
   ) %>% 
-    dplyr::select(ticker, return_50d, return_200d, ma_50d_200d, return_avwap_ytd, dplyr::ends_with("%"))
+    dplyr::select(ticker, return_50d, return_200d, ma_50d_200d, return_ytd, return_avwap_ytd, dplyr::ends_with("%"))
   
   DT::datatable(
     tab_data,
@@ -223,6 +223,7 @@ display_table_summary <- function(etfs, stocks){
       "50D %" = "return_50d",
       "200D %" = "return_200d",
       "50D > 200D" = "ma_50d_200d",
+      "YTD %" = "return_ytd",
       "YTD AVWAP %" = "return_avwap_ytd"
     ),
     class = 'cell-border compact hover',
@@ -235,10 +236,10 @@ display_table_summary <- function(etfs, stocks){
     )
   ) %>% 
     # formatting
-    DT::formatPercentage(c(2:3, 5:9), digits = 1) %>%
+    DT::formatPercentage(c(2:3, 5:10), digits = 1) %>%
     DT::formatStyle(1, fontWeight = "bold") %>%
-    DT::formatStyle(c(2:3, 5:9), color = DT::styleInterval(0, c("red", "green"))) %>%
-    DT::formatStyle(c(2:3, 5:9), color = DT::styleEqual(0, "black")) %>%
+    DT::formatStyle(c(2:3, 5:10), color = DT::styleInterval(0, c("red", "green"))) %>%
+    DT::formatStyle(c(2:3, 5:10), color = DT::styleEqual(0, "black")) %>%
     DT::formatStyle(c(4), backgroundColor = DT::styleEqual(c("No", "Yes"), c(rgb(1,0,0,.15), rgb(0,1,0,.15)))) 
 }
 
