@@ -271,7 +271,7 @@ shinyServer(function(input, output) {
   })
   
   output$graph_breadth_uptrend_history <- renderPlot({
-    graph_ma_uptrend_by_group(s, past_years = 2)
+    graph_ma_uptrend_by_group(past_years = 2)
   })
   
   output$graph_obos <- renderPlot({

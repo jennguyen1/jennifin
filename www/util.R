@@ -245,27 +245,32 @@ display_table_summary <- function(etfs, stocks){
 }
 
 # breadth by sector
-graph_ma_uptrend_by_group <- function(dat, past_years = 2){
-  grp <- dat %>% 
-    dplyr::distinct(sector) %>% 
-    dplyr::arrange(sector) %>% 
-    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "defensive", "growth", "defensive"))
+graph_ma_uptrend_by_group <- function(past_years = 2){
+  yr <- year(today) - past_years # todo
   
-  df <- dat %>% 
-    subset(year(date) >= (year(today)-past_years) & wday(date) %in% c(2,4,6)) %>%
-    dplyr::left_join(grp, "sector") 
-    
+  df <- query_db(stringr::str_glue("
+  SELECT 
+    s.ticker, s.company, s.sector, s.industry, s.size, sectors.category,
+    p.date, p.open, p.high, p.low, p.close, p.volume, p.rsi, p.price_20d, p.price_50d, p.price_200d
+  FROM stocks as s
+  LEFT JOIN price_stats as p
+    ON s.ticker = p.ticker
+  LEFT JOIN sectors
+    ON s.sector = sectors.sector
+  WHERE date > '{yr}-01-01'
+"))
+  
   sdf <- df %>% # by size
     dplyr::group_by(date, size) %>% 
     dplyr::summarise(
-        p = mean(close > ma_50 & close > ma_200 & ma_50 > ma_200, na.rm = TRUE)
+        p = mean(close > price_50d & close > price_200d & price_50d > price_200d, na.rm = TRUE)
       ) %>% 
-    dplyr::mutate(type = "By Size", group = size)
+    dplyr::mutate(type = "By Size", category = size)
 
   adf <- df %>% # by sector
-    dplyr::group_by(date, group) %>% 
+    dplyr::group_by(date, category) %>% 
     dplyr::summarise(
-      p = mean(close > ma_50 & close > ma_200 & ma_50 > ma_200, na.rm = TRUE)
+      p = mean(close > price_50d & close > price_200d & price_50d > price_200d, na.rm = TRUE)
     ) %>% 
     dplyr::mutate(type = "By Group")
 
@@ -273,8 +278,8 @@ graph_ma_uptrend_by_group <- function(dat, past_years = 2){
   plot_data <- dplyr::bind_rows(sdf, adf) %>% 
     dplyr::mutate( 
       type = factor(type, levels = c("By Size", "By Group")),
-      group = stringr::str_to_title(group),
-      group = factor(group, levels = c("Lrg", "Mid", "Sml", "Cyclical", "Growth", "Defensive"))
+      category = stringr::str_to_title(category),
+      category = factor(category, levels = c("Lrg", "Mid", "Sml", "Cyclical", "Growth", "Defensive"))
     )
   
   plot_lab <- plot_data %>% 
@@ -282,11 +287,11 @@ graph_ma_uptrend_by_group <- function(dat, past_years = 2){
     dplyr::filter(date == max(date))
   
   plot_data %>% 
-    ggplot(aes(date, p*100, color = group)) +
+    ggplot(aes(date, p*100, color = category)) +
     geom_line(linewidth = 0.9) +
     geom_text(
       data = plot_lab, 
-      aes(date, p*100, label = group, color = group),
+      aes(date, p*100, label = category, color = category),
       hjust = -0.15
     ) +
     geom_hline(yintercept = c(0, 100), color = "grey50") +
@@ -592,7 +597,7 @@ graph_ytd_distribution <- function(stocks, etfs){
 }
 
 graph_obos <- function(dat, past_years = 2){
-  yr <- year(Sys.Date()) - past_years
+  yr <- year(today) - past_years
   plot_data <- stringr::str_glue("SELECT date, ob, os FROM obos WHERE date >= '{yr}-01-01'")%>% 
     query_db() %>% 
     tidyr::pivot_longer(-date)

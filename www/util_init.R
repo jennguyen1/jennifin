@@ -1,12 +1,11 @@
 options(readr.show_col_types = FALSE)
 source("www/db_executions.R")
 
-## some date stuff ##
+## some general stuff ##
 
-today <- Sys.Date() # todo
 use_db <- "data/stock_prices.db"
 
-# note this may change
+# note this may change todo
 anchor_1 <- "2025-02-19"
 anchor_2 <- "2025-03-13"
 anchor_1_msg <- "Feb High"
@@ -84,6 +83,7 @@ query_db <- function(query, db = use_db){
     DBI::dbDisconnect(db_conn)
   })
 }
+
 
 ### data creation ###
 convert_to_return <- function(dat){
