@@ -246,25 +246,25 @@ display_table_summary <- function(etfs, stocks){
 
 # breadth by sector
 graph_ma_uptrend_by_group <- function(past_years = 2){
-  yr <- year(today) - past_years # todo
+  yr <- year(today) - past_years 
   
   df <- query_db(stringr::str_glue("
-  SELECT 
-    s.ticker, s.company, s.sector, s.industry, s.size, sectors.category,
-    p.date, p.open, p.high, p.low, p.close, p.volume, p.rsi, p.price_20d, p.price_50d, p.price_200d
-  FROM stocks as s
-  LEFT JOIN price_stats as p
-    ON s.ticker = p.ticker
-  LEFT JOIN sectors
-    ON s.sector = sectors.sector
-  WHERE date > '{yr}-01-01'
-"))
+    SELECT 
+      s.ticker, s.company, s.sector, s.industry, s.size, sectors.category,
+      p.date, p.open, p.high, p.low, p.close, p.volume, p.rsi, p.price_20d, p.price_50d, p.price_200d
+    FROM stocks as s
+    LEFT JOIN price_stats as p
+      ON s.ticker = p.ticker
+    LEFT JOIN sectors
+      ON s.sector = sectors.sector
+    WHERE date > '{yr}-01-01'
+  "))
   
   sdf <- df %>% # by size
     dplyr::group_by(date, size) %>% 
     dplyr::summarise(
-        p = mean(close > price_50d & close > price_200d & price_50d > price_200d, na.rm = TRUE)
-      ) %>% 
+      p = mean(close > price_50d & close > price_200d & price_50d > price_200d, na.rm = TRUE)
+    ) %>% 
     dplyr::mutate(type = "By Size", category = size)
 
   adf <- df %>% # by sector
