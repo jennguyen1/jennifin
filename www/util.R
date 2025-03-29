@@ -1,6 +1,4 @@
 
-source('www/util_init.R')
-
 ### general functions ###
 calculate_perc_above <- function(dat, val){
   tryCatch({

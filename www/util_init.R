@@ -1,17 +1,6 @@
 options(readr.show_col_types = FALSE)
 source("www/db_executions.R")
 
-## some general stuff ##
-
-use_db <- "data/stock_prices.db"
-
-# note this may change todo
-anchor_1 <- "2025-02-19"
-anchor_2 <- "2025-03-13"
-anchor_1_msg <- "Feb High"
-anchor_2_msg <- "Mar Low"
-anchor_msg <- anchor_1_msg
-
 
 ### general functions ###
 pdiff <- function(x, base) round((x-base)/base, 3) 
@@ -49,8 +38,8 @@ add_to_price_db <- function(dat, db = use_db){
 }
 
 run_db_update <- function(){
-  reticulate::py_run_file("www/extract_price_data.py")
-  d_ready_upload <- prep_for_db_upload(py$d_out, py$d_old)
+  reticulate::source_python("www/extract_price_data.py")
+  d_ready_upload <- prep_for_db_upload(d_out, d_old)
   add_to_price_db(d_ready_upload)
 }
 
@@ -95,7 +84,7 @@ convert_to_return <- function(dat){
     purrr::set_names(colnames(.) %>% stringr::str_replace("price_", "return_"))
 }
 
-get_data <- function(table, pull_date){
+get_data <- function(table, pull_date, db = use_db){
   assertthat::assert_that(table %in% c("etfs", "stocks"))
   
   pull_date <- get_latest_date()
@@ -105,7 +94,8 @@ get_data <- function(table, pull_date){
     "stocks.ticker, stocks.company, stocks.sector, stocks.industry, stocks.size"
   }
   
-  query_db(stringr::str_glue(assemble_data)) %>% convert_to_return()
+  query_db(stringr::str_glue(assemble_data), db) %>% 
+    convert_to_return()
 }
 
 apply_technical_screen <- function(dat, etfs){
@@ -266,18 +256,4 @@ animate_breadth <- function(yr = 2020){
   system("ffmpeg -i www/ma_breadth.gif -movflags faststart -pix_fmt yuv420p -vf 'scale=trunc(iw/2)*2:trunc(ih/2)*2' www/ma_breadth.mp4")
   file.remove("www/ma_breadth.gif")
 }
-
-
-### update tables on anchor date changes ###
-
-# # price anchor 1&2
-# add_view_price_anchor("1", anchor_1)
-# add_view_price_anchor("2", anchor_2)
-# 
-# # avwap anchor 1&2
-# add_view_avwap("1", anchor_1)
-# add_view_avwap("2", anchor_2)
-# 
-# # avwap anchor ytd
-# add_view_avwap("ytd", "2025-01-01")
 
