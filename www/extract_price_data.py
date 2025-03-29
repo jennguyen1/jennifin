@@ -54,5 +54,5 @@ def get_updated_prices(tickers, query_date):
 
 # run
 yr_1y_ago = str((datetime.datetime.now() - datetime.timedelta(weeks = 52)).year)
-d_old, tickers, query_date = get_price_db(yr_3m_ago)
+d_old, tickers, query_date = get_price_db(yr_1y_ago)
 d_out = get_updated_prices(tickers, query_date)
