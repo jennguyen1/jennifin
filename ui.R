@@ -32,7 +32,7 @@ sidebar <- dashboardSidebar(
     menuItem("Github Source Code", href = "https://github.com/jennguyen1/jennifin", icon = icon("github"))
   ),
   div(
-    p("Copyright (c) 2024 Jennifer N Nguyen under the MIT License"),
+    p("Copyright (c) 2025 Jennifer N Nguyen under the MIT License"),
     style = "font-size:12px; color:grey; padding: 0px 10px; bottom: 0px; position: absolute"
   )
 )
