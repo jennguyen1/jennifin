@@ -152,7 +152,7 @@ apply_technical_screen <- function(dat, etfs){
   d2 %>% dplyr::arrange(dplyr::desc(return_52w_hi))
 }
 
-# todo
+
 ### data collection ### 
 collect_ta_stats <- function(stocks, stocks_ta, date){
   
@@ -179,41 +179,41 @@ collect_ta_stats <- function(stocks, stocks_ta, date){
 
 
 ### breadth animation ###
-animate_breadth <- function(dat){
+animate_breadth <- function(yr = 2020){
   library(gganimate)
   
-  dat_sub <- dat %>% 
-    dplyr::filter(year(date) >= 2020) %>% 
-    subset(wday(date) %in% c(2,4,6))
-  
-  grp <- dat_sub %>% 
-    dplyr::distinct(sector) %>% 
-    dplyr::arrange(sector) %>% 
-    dplyr::mutate(group = c("growth", "growth", "defensive", "cyclical", "cyclical", "defensive", "cyclical", "cyclical", "defensive", "growth", "defensive"))
-  
-  df <- dat_sub %>% 
-    dplyr::left_join(grp, "sector") %>% 
-    dplyr::select(date, ticker, sector, group, size, close, dplyr::starts_with("ma")) %>% 
-    dplyr::mutate(dplyr::across(dplyr::starts_with("ma"), \(x) close > x))
+  df <- query_db(stringr::str_glue("
+    SELECT 
+      s.ticker, s.sector, s.size, sectors.category,
+      p.date, p.close, p.price_20d, p.price_50d, p.price_200d
+    FROM stocks as s
+    LEFT JOIN price_stats as p
+      ON s.ticker = p.ticker
+    LEFT JOIN sectors
+      ON s.sector = sectors.sector
+    WHERE date > '{yr}-01-01'
+  ")) %>% 
+    dplyr::filter(wday(date) %in% c(2,4,6)) %>% 
+    dplyr::mutate(dplyr::across(dplyr::matches("_\\d+d$"), \(x) close > x))
   
   sdf <- df %>% # by size
     dplyr::group_by(date, size) %>% 
     dplyr::summarise(across(
-      dplyr::starts_with("ma"),
+      dplyr::ends_with("0d"),
       \(x) mean(x, na.rm = TRUE)
     )) %>% 
-    dplyr::mutate(group = "all") %>% 
+    dplyr::mutate(category = "all") %>% 
     dplyr::rename(sector = size)
   
   adf <- df %>% # by sector
-    dplyr::group_by(date, group, sector) %>% 
+    dplyr::group_by(date, category, sector) %>% 
     dplyr::summarise(dplyr::across(
-      dplyr::starts_with("ma"),
+      dplyr::ends_with("0d"),
       \(x) mean(x, na.rm = TRUE)
     ))
   
   plot_df <- dplyr::bind_rows(sdf, adf) %>% 
-    tidyr::pivot_longer(-c(date, group, sector)) %>% 
+    tidyr::pivot_longer(-c(date, category, sector)) %>% 
     dplyr::mutate(
       days = factor(readr::parse_number(name)),
       sector = plyr::mapvalues(
@@ -221,7 +221,7 @@ animate_breadth <- function(dat){
         c("Consumer Staples", "Communication Services", "Consumer Discretionary"), 
         c("Staples", "Communications", "Discretionary")
       ),
-      group = factor(stringr::str_to_title(group), levels = c("All", "Growth", "Cyclical", "Defensive"))
+      category = factor(stringr::str_to_title(category), levels = c("All", "Growth", "Cyclical", "Defensive"))
     ) 
   
   # animate graph
@@ -235,7 +235,7 @@ animate_breadth <- function(dat){
       aes(3.1, value*100, label = sector, color = sector),
       hjust = 0
     ) +
-    facet_grid(~group) + 
+    facet_grid(~category) + 
     scale_y_continuous(breaks = seq(0, 100, 10)) + 
     scale_color_manual(values = c(
       "deepskyblue", "dodgerblue", "darkgreen", "yellowgreen", "red", "green3", "black", 
