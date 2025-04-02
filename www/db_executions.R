@@ -30,7 +30,7 @@ CREATE TABLE prices(
   close DOUBLE,
   volume HUGEINT,
   rsi DOUBLE,
-  UNIQUE(ticker, date)
+  PRIMARY KEY(ticker, date)
 );
 ",
 price_index = "
