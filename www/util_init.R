@@ -181,7 +181,7 @@ animate_breadth <- function(yr = 2020){
       ON s.ticker = p.ticker
     LEFT JOIN sectors
       ON s.sector = sectors.sector
-    WHERE date > '{yr}-01-01'
+    WHERE date >= '{yr}-01-01'
   ")) %>% 
     dplyr::filter(wday(date) %in% c(2,4,6)) %>% 
     dplyr::mutate(dplyr::across(dplyr::matches("_\\d+d$"), \(x) close > x))

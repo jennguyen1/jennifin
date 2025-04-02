@@ -256,7 +256,7 @@ graph_ma_uptrend_by_group <- function(past_years = 2){
       ON s.ticker = p.ticker
     LEFT JOIN sectors
       ON s.sector = sectors.sector
-    WHERE date > '{yr}-01-01'
+    WHERE date >= '{yr}-01-01'
   "))
   
   sdf <- df %>% # by size
