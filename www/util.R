@@ -578,7 +578,7 @@ graph_ytd_distribution <- function(stocks, etfs){
     )
 }
 
-graph_obos <- function(dat, past_years = 2){
+graph_obos <- function(past_years = 2){
   yr <- year(today) - past_years
   plot_data <- stringr::str_glue("SELECT date, ob, os FROM obos WHERE date >= '{yr}-01-01'")%>% 
     query_db() %>% 
