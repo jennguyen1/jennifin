@@ -13,10 +13,6 @@ animate_breadth(2020)
 # add_view_price_anchor("1", anchor_1)
 # add_view_price_anchor("2", anchor_2)
 # 
-# # avwap anchor 1&2
-# add_view_avwap("1", anchor_1)
-# add_view_avwap("2", anchor_2)
-# 
 # # avwap anchor ytd
 # add_view_avwap("ytd", "2025-01-01")
 #

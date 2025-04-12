@@ -87,7 +87,7 @@ shinyServer(function(input, output) {
       title = "TA Screening Process", 
       tags$ol(
         tags$li("In an uptrend defined by being above 50DMA, 200D MA, and 50D MA > 200D MA"), 
-        tags$li("At or above intermediate term high AVWAP"),
+        tags$li("At or above medium term high AVWAP"),
         tags$li("Outperformance relative to SPY (+/- 1%) over trailing month"),
         tags$li("Outperformance relative to corresponding sector (+/- 1%) over trailing month"),
         tags$li("Sort by proximity to 52-week highs")
@@ -296,7 +296,7 @@ shinyServer(function(input, output) {
   })
   
   output$graph_price_avwap <- renderPlot({ 
-    graph_price_avwap(stocks, input$var_pa_graph)
+    graph_price_avwap(stocks)
   })
   
   output$graph_hilo_sector <- renderPlot({ 

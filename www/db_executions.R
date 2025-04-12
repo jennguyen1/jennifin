@@ -214,7 +214,6 @@ SELECT
   p.price_20d, p.price_50d, p.price_200d, 
   p.price_52w_lo, p.price_52w_hi, p.price_ytd,
   p.price_1m, p.price_3m, p.price_6m, p.price_12m,
-  ava1.avwap as price_avwap_anchor_1, ava2.avwap as price_avwap_anchor_2, 
   avay.avwap as price_avwap_ytd,
   d1d.price_anchor_1, d1d.price_anchor_2, 
   ava3.avwap as price_avwap_lo, ava4.avwap as price_avwap_hi, 
@@ -222,14 +221,10 @@ SELECT
 FROM {table} 
 LEFT JOIN price_stats as p
   ON {table}.ticker = p.ticker
-LEFT JOIN avwap_anchor_1 as ava1
-  ON p.ticker = ava1.ticker AND p.date = ava1.date
-LEFT JOIN avwap_anchor_2 as ava2
-  ON p.ticker = ava2.ticker AND p.date = ava2.date
-LEFT JOIN avwap_anchor_ytd as avay
-  ON p.ticker = avay.ticker AND p.date = avay.date
 LEFT JOIN d1d
   ON p.ticker = d1d.ticker
+LEFT JOIN avwap_anchor_ytd as avay
+  ON p.ticker = avay.ticker AND p.date = avay.date
 LEFT JOIN avwap_specific_low as ava3
   ON p.ticker = ava3.ticker AND p.date = ava3.date
 LEFT JOIN avwap_specific_high as ava4 

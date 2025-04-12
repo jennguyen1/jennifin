@@ -56,7 +56,6 @@ main <- tabItem(
     )),
     tabPanel("Swing High/Low Breadth", box(
       width = NULL,
-      radioButtons("var_pa_graph", "Order By", choices = c("Price", "AVWAP"), inline = TRUE),
       div(plotOutput("graph_price_avwap", height = "530px", width = "950px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 950px") 
     )) 
 ))

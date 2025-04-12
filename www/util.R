@@ -60,28 +60,21 @@ create_display_row <- function(get_ticker, etfs, stocks){
     dplyr::filter(ticker == get_ticker) %>% 
     dplyr::mutate(
       ticker = get_ticker,
-      p_components_20d = calculate_perc_above(p_components_0, "return_20d"),
-      p_components_50d = calculate_perc_above(p_components_0, "return_50d"),
-      p_components_200d = calculate_perc_above(p_components_0, "return_200d"),
-      ma_50d_200d = ifelse(return_50d < return_200d, "Yes", "No"), 
-      p_components_anchor_1 = calculate_perc_above(p_components_0, "return_anchor_1"),
-      p_components_anchor_2 = calculate_perc_above(p_components_0, "return_anchor_2"),
-      p_components_avwap_anchor_1 = calculate_perc_above(p_components_0, "return_avwap_anchor_1"),
-      p_components_avwap_anchor_2 = calculate_perc_above(p_components_0, "return_avwap_anchor_2")
+      ma_50d_200d = ifelse(return_50d < return_200d, "Yes", "No")
     ) %>% 
     dplyr::select(
       ticker,
       dplyr::matches("components_\\d+d"), 
       return_50d, return_200d, ma_50d_200d,
       return_ytd, return_avwap_ytd, 
-      p_components_anchor_1, return_anchor_1, p_components_avwap_anchor_1, return_avwap_anchor_1, 
-      p_components_anchor_2, return_anchor_2, p_components_avwap_anchor_2, return_avwap_anchor_2
+      return_anchor_1, return_anchor_2, 
+      return_avwap_hi, return_avwap_lo
     ) %>% 
     dplyr::rename_with(~ plyr::mapvalues(., 
-                         c("p_components_anchor_1", "return_anchor_1", "p_components_avwap_anchor_1", "return_avwap_anchor_1", 
-                           "p_components_anchor_2", "return_anchor_2", "p_components_avwap_anchor_2", "return_avwap_anchor_2"), 
-                         c(paste("% Above", anchor_1_msg), paste(anchor_1_msg, "%"), paste("% Above AVWAP", anchor_1_msg), paste(anchor_1_msg, "AVWAP %"), 
-                           paste("% Above", anchor_2_msg), paste(anchor_2_msg, "%"), paste("% Above AVWAP", anchor_2_msg), paste(anchor_2_msg, "AVWAP %")))
+                         c("return_anchor_1", "return_anchor_2"), 
+                         c(paste(anchor_1_msg, "%"), paste(anchor_2_msg, "%")),
+                          warn_missing = FALSE
+                       )
     )
 }
 
@@ -213,7 +206,7 @@ display_table_summary <- function(etfs, stocks){
     c("SPY", "IJH", "IJR", "XLF", "XLI", "XLB", "XLE", "XLY", "XLK", "XLC", "XLRE", "XLP", "XLU", "XLV", "EFA", "EEM"), 
     create_display_row, etfs, stocks
   ) %>% 
-    dplyr::select(ticker, return_50d, return_200d, ma_50d_200d, return_ytd, return_avwap_ytd, dplyr::ends_with("%"))
+    dplyr::select(ticker, return_50d, return_200d, ma_50d_200d, return_ytd, return_avwap_ytd, return_avwap_hi, return_avwap_lo, dplyr::ends_with("%"))
   
   DT::datatable(
     tab_data,
@@ -224,7 +217,9 @@ display_table_summary <- function(etfs, stocks){
       "200D %" = "return_200d",
       "50D > 200D" = "ma_50d_200d",
       "YTD %" = "return_ytd",
-      "YTD AVWAP %" = "return_avwap_ytd"
+      "YTD AVWAP %" = "return_avwap_ytd",
+      "MT High AVWAP %" = "return_avwap_hi",
+      "MT Low AVWAP %" = "return_avwap_lo"
     ),
     class = 'cell-border compact hover',
     select = 'none',
@@ -412,13 +407,11 @@ graph_ma_uptrend_sector <- function(dat){ # (1) >50d (2) >200d (3) 50d > 200d
     )
 }
 
-graph_price_avwap_1 <- function(dat, anchor, anchor_label, variable){
+graph_price_avwap_1 <- function(dat, anchor, anchor_label){
   plot_data <- dat %>% 
-    dplyr::filter(stringr::str_detect(var, anchor)) %>% 
-    dplyr::mutate(var = ifelse(stringr::str_detect(var, "avwap"), "AVWAP", "Price"))
-    
+    dplyr::filter(stringr::str_detect(var, anchor))
+
   plot_order <- plot_data %>% 
-    dplyr::filter(var == variable) %>% 
     dplyr::arrange(p) %>% 
     dplyr::pull(sector)
   
@@ -428,11 +421,9 @@ graph_price_avwap_1 <- function(dat, anchor, anchor_label, variable){
       label = anchor_label
     ) %>% 
     ggplot(aes(sector, p, color = category)) +
-    geom_point(aes(shape = var), size = 3, stroke = 1) + 
-    geom_line(size = 1, alpha = 0.5) + 
+    geom_point(shape = 1, size = 3, stroke = 1) + 
     facet_grid(~label) +
     scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 10)) +
-    scale_shape_manual(values = c(2, 1)) + 
     scale_color_manual(values = c("grey50", "limegreen", "tomato", "dodgerblue")) +
     guides(color = FALSE) +
     labs(x = "", y = "% Above", shape = "") + 
@@ -445,7 +436,7 @@ graph_price_avwap_1 <- function(dat, anchor, anchor_label, variable){
     )
 }
 
-graph_price_avwap <- function(dat, var = "Price"){
+graph_price_avwap <- function(dat){
   
   plot_df_a <- dat %>% 
     dplyr::left_join(sectors, "sector") %>% 
@@ -453,9 +444,7 @@ graph_price_avwap <- function(dat, var = "Price"){
     dplyr::summarise(
       p_anchor_1 = mean(return_anchor_1 > 0, na.rm = TRUE) * 100,
       p_anchor_2 = mean(return_anchor_2 > 0, na.rm = TRUE) * 100,
-      p_avwap_ytd = mean(return_avwap_ytd > 0, na.rm = TRUE) * 100,
-      p_avwap_anchor_1 = mean(return_avwap_anchor_1 > 0, na.rm = TRUE) * 100,
-      p_avwap_anchor_2 = mean(return_avwap_anchor_2 > 0, na.rm = TRUE) * 100
+      p_avwap_ytd = mean(return_avwap_ytd > 0, na.rm = TRUE) * 100
     ) %>% 
     dplyr::ungroup() 
   
@@ -464,9 +453,7 @@ graph_price_avwap <- function(dat, var = "Price"){
     dplyr::summarise(
       p_anchor_1 = mean(return_anchor_1 > 0, na.rm = TRUE) * 100,
       p_anchor_2 = mean(return_anchor_2 > 0, na.rm = TRUE) * 100,
-      p_avwap_ytd = mean(return_avwap_ytd > 0, na.rm = TRUE) * 100,
-      p_avwap_anchor_1 = mean(return_avwap_anchor_1 > 0, na.rm = TRUE) * 100,
-      p_avwap_anchor_2 = mean(return_avwap_anchor_2 > 0, na.rm = TRUE) * 100
+      p_avwap_ytd = mean(return_avwap_ytd > 0, na.rm = TRUE) * 100
     ) %>% 
     dplyr::ungroup() %>% 
     dplyr::mutate(
@@ -478,8 +465,8 @@ graph_price_avwap <- function(dat, var = "Price"){
     tidyr::pivot_longer(dplyr::starts_with("p"), names_to = "var", values_to = "p") 
 
   # graph and combine
-  g1 <- graph_price_avwap_1(plot_df, "anchor_1", anchor_1_msg, var)
-  g2 <- graph_price_avwap_1(plot_df, "anchor_2", anchor_2_msg, var)
+  g1 <- graph_price_avwap_1(plot_df, "anchor_1", anchor_1_msg)
+  g2 <- graph_price_avwap_1(plot_df, "anchor_2", anchor_2_msg)
   
   
   cowplot::plot_grid(
