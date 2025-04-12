@@ -138,6 +138,14 @@ CREATE VIEW obos AS(
   GROUP BY date
 );
 ",
+# Price anchor
+price_anchor = "
+CREATE VIEW price_anchor_{dt_name} AS(
+  SELECT ticker, date, close
+  FROM prices
+  WHERE date = '{dt}'
+);
+",
 # AVWAP
 avwap = "
 CREATE VIEW avwap_anchor_{dt_name} AS(
@@ -153,12 +161,36 @@ CREATE VIEW avwap_anchor_{dt_name} AS(
   SELECT ticker, date, anchor, avwap FROM tab
 );
 ",
-# Price anchor
-price_anchor = "
-CREATE VIEW price_anchor_{dt_name} AS(
-  SELECT ticker, date, close
-  FROM prices
-  WHERE date = '{dt}'
+avwap_specific = "
+CREATE VIEW avwap_specific_{level} AS(
+  WITH add_anchor AS(
+    SELECT 
+      *,
+      {FUN}({level}) OVER(PARTITION BY ticker) as anchor 
+    FROM prices
+    WHERE date >= '{dt}'
+  ),
+  t_dt_anchor AS(
+    SELECT ticker, date as anchor_date
+    FROM add_anchor
+    WHERE {level} = anchor 
+  ),
+  d_combo AS(
+    SELECT *
+    FROM prices as p
+    FULL JOIN t_dt_anchor as a
+    ON p.ticker = a.ticker
+    WHERE p.date >= a.anchor_date
+  ),
+  d_avwap AS(
+    SELECT 
+    ticker, date, anchor_date as anchor,
+    SUM((open+high+low+close)/4 * volume) OVER(PARTITION BY ticker ORDER BY ticker, date) as num,
+    SUM(volume) OVER(PARTITION BY ticker ORDER BY ticker, date) as den,
+    num / den as avwap
+    FROM d_combo
+  )
+  SELECT ticker, date, anchor, avwap FROM d_avwap
 );
 "
 )
@@ -185,6 +217,7 @@ SELECT
   ava1.avwap as price_avwap_anchor_1, ava2.avwap as price_avwap_anchor_2, 
   avay.avwap as price_avwap_ytd,
   d1d.price_anchor_1, d1d.price_anchor_2, 
+  ava3.avwap as price_avwap_lo, ava4.avwap as price_avwap_hi, 
   d1d.days_since_ob, d1d.days_since_os
 FROM {table} 
 LEFT JOIN price_stats as p
@@ -197,6 +230,10 @@ LEFT JOIN avwap_anchor_ytd as avay
   ON p.ticker = avay.ticker AND p.date = avay.date
 LEFT JOIN d1d
   ON p.ticker = d1d.ticker
+LEFT JOIN avwap_specific_low as ava3
+  ON p.ticker = ava3.ticker AND p.date = ava3.date
+LEFT JOIN avwap_specific_high as ava4 
+  ON p.ticker = ava4.ticker AND p.date = ava4.date
 WHERE p.date = '{pull_date}'
 ;
 "

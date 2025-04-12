@@ -19,6 +19,10 @@ animate_breadth(2020)
 # 
 # # avwap anchor ytd
 # add_view_avwap("ytd", "2025-01-01")
+#
+# # avwap anchor specific
+# add_view_avwap_specific("high", "2024-11-01")
+# add_view_avwap_specific("low", "2025-01-01")
 
 
 ### Every Quarter - SP Companies ###

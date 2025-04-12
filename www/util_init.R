@@ -53,13 +53,21 @@ execute_in_db <- function(query, db = use_db){
   })
 }
 
+add_view_price_anchor <- function(dt_name, dt, db = use_db){
+  query <- stringr::str_glue(view_creation['price_anchor'])
+  execute_in_db(query, db = db)
+}
+
 add_view_avwap <- function(dt_name, dt, db = use_db){
   query <- stringr::str_glue(view_creation['avwap'])
   execute_in_db(query, db = db)
 }
 
-add_view_price_anchor <- function(dt_name, dt, db = use_db){
-  query <- stringr::str_glue(view_creation['price_anchor'])
+add_view_avwap_specific <- function(level, dt, db = use_db){
+  assertthat::assert_that(length(level) == 1, level %in% c("low", "high"))
+  FUN = ifelse(level == "low", "MIN", "MAX")
+
+  query <- stringr::str_glue(view_creation['avwap_specific'])
   execute_in_db(query, db = db)
 }
 
@@ -122,9 +130,9 @@ apply_technical_screen <- function(dat, etfs){
     dplyr::select(sector, return_1m)
   
   # initial filter based 50D/200D uptrend, S/R, RS to spy / sector
-  d1 <- dat %>% 
+  d1 <- dat %>% dplyr::filter(return_avwap_hi >= 0) %>% 
     dplyr::filter(return_50d > 0 & return_200d > 0 & return_50d < return_200d) %>%  # keep above 50d & 200d SMA and 50d SMA > 200d SMA
-    dplyr::filter(return_avwap_anchor_1 >= 0) %>% # at or above avwap from anchor date high (target something like 52w high for stocks), note may change
+    dplyr::filter(return_avwap_hi >= 0) %>% # at or above avwap from specific high
     dplyr::filter(return_1m - spy_1m > -0.01) %>% # remove laggards to SPY over last 1m
     dplyr::left_join(sector_1m, "sector", suffix = c("", "_sect")) %>% 
     dplyr::filter(return_1m - return_1m_sect > -0.01)
@@ -133,7 +141,7 @@ apply_technical_screen <- function(dat, etfs){
     dplyr::select(
       ticker, 
       dplyr::one_of(c("company", "sector", "industry", "size")), 
-      dplyr::matches("anchor_1"), return_avwap_ytd, 
+      return_avwap_hi, return_avwap_ytd, 
       days_since_os, 
       dplyr::matches("52")
     )

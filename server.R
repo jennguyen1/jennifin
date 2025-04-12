@@ -87,7 +87,7 @@ shinyServer(function(input, output) {
       title = "TA Screening Process", 
       tags$ol(
         tags$li("In an uptrend defined by being above 50DMA, 200D MA, and 50D MA > 200D MA"), 
-        tags$li("At or above", anchor_msg, "AVWAP"),
+        tags$li("At or above intermediate term high AVWAP"),
         tags$li("Outperformance relative to SPY (+/- 1%) over trailing month"),
         tags$li("Outperformance relative to corresponding sector (+/- 1%) over trailing month"),
         tags$li("Sort by proximity to 52-week highs")
@@ -154,8 +154,8 @@ shinyServer(function(input, output) {
           colnames(.) %>% 
             stringr::str_to_title() %>% 
             plyr::mapvalues(., 
-              c("Return_anchor_1", "Return_avwap_anchor_1", "Return_avwap_ytd", "Days_since_os", "Return_52w_lo", "Return_52w_hi"), 
-              c(paste(anchor_msg, "%"), paste(anchor_msg, "AVWAP %"), "YTD AVWAP %","Days Since OS", "% Above 52W Low", "% Below 52W High")
+              c("Return_avwap_hi", "Return_avwap_ytd", "Days_since_os", "Return_52w_lo", "Return_52w_hi"), 
+              c("AVWAP High %", "YTD AVWAP %","Days Since OS", "% Above 52W Low", "% Below 52W High")
             )
         ) %>% 
         dplyr::mutate_at(dplyr::vars(dplyr::matches("%")), ~ round(.x*100, 1)) %>% 
