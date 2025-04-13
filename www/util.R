@@ -162,7 +162,7 @@ tabulate_performance_etfs <- function(dat, sub = NULL){
       ticker, desc, 
       dplyr::matches("\\d+m$"), return_ytd, return_avwap_ytd,
       dplyr::ends_with("50d"), dplyr::ends_with("200d"), 
-      dplyr::matches("52w")
+      dplyr::matches("52w"), dplyr::matches("avwap")
     )
 
   # tabulate
@@ -181,14 +181,16 @@ tabulate_performance_etfs <- function(dat, sub = NULL){
       "50D %" = "return_50d",
       "200D %" = "return_200d",
       'Above 52W Low' = 'return_52w_lo',
-      "Below 52W High" = "return_52w_hi"
+      "Below 52W High" = "return_52w_hi",
+      "Low AVWAP %" = "return_avwap_lo", 
+      "High AVWAP %" = "return_avwap_hi"
     ),  
     class = 'cell-border compact hover',
     filter = 'bottom',
     select = 'none',
     options = list(
       dom = 'tr', # table display
-      order = list(list(ncol(tab_data)-1, 'desc')), # default order based on 52w high
+      order = list(list(ncol(tab_data)-3, 'desc')), # default order based on 52w high
       pageLength = nrow(tab_data), # minimal scrolling
       scrollX = TRUE, scrollY = min(375, nrow(tab_data)*30)
     )
