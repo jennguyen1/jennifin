@@ -171,9 +171,10 @@ CREATE VIEW avwap_specific_{level} AS(
     WHERE date >= '{dt}'
   ),
   t_dt_anchor AS(
-    SELECT ticker, date as anchor_date
+    SELECT ticker, MAX(date) as anchor_date
     FROM add_anchor
     WHERE {level} = anchor 
+    GROUP BY ticker
   ),
   d_combo AS(
     SELECT *
