@@ -611,20 +611,18 @@ graph_gex <- function(){
     ) 
 }
 
-graph_anchor_scatter <- function(dat, color){
+graph_anchor_scatter <- function(dat, xvar, yvar, xlab, ylab, color){
   
   dat %>% 
-    ggplot(aes(return_anchor_1*100, return_anchor_2*100, label = ticker, color = {{color}})) +
-    geom_hline(yintercept = 0, color = "grey40") +
-    geom_vline(xintercept = 0, color = "grey40") +
-    geom_abline(intercept = 0, slope = 1, color = "grey40") +
+    dplyr::rename_with(~ plyr::mapvalues(., c(xvar, yvar), c("x", "y"))) %>% 
+    ggplot(aes(x*100, y*100, label = ticker, color = {{color}})) +
+    geom_hline(yintercept = 0, color = "grey80") +
+    geom_vline(xintercept = 0, color = "grey80") +
+    geom_abline(intercept = 0, slope = 1, color = "grey80") +
     geom_text() +
     scale_x_continuous(breaks = seq(-100, 100, 10)) + 
     scale_y_continuous(breaks = seq(-100, 100, 10)) + 
-    labs(
-      x = paste0(anchor_1_msg, " (%)"),
-      y = paste0(anchor_2_msg, " (%)")
-    ) + 
+    labs(x = xlab, y = ylab) + 
     theme(
       panel.grid.major = element_blank()
     )

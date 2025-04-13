@@ -71,10 +71,21 @@ shinyServer(function(input, output) {
       sub_tickers <- etfs$ticker
     }
     
+    req(input$g_anchor_x != input$g_anchor_y)
+    
+    vars <- c("return_anchor_1", "return_anchor_2", "return_ytd", "return_avwap_lo", "return_avwap_hi", "return_avwap_ytd")
+    labs <- c(paste(c(anchor_1_msg, anchor_2_msg, "YTD"), "%"), paste(c("Low", "High", "YTD"), "AVWAP %"))
+    xlab <- plyr::mapvalues(input$g_anchor_x, vars, labs)
+    ylab <- plyr::mapvalues(input$g_anchor_y, vars, labs)
+    
     plotly::ggplotly(
       etfs %>% 
         dplyr::filter(ticker %in% sub_tickers) %>% 
-        graph_anchor_scatter(color = category)
+        graph_anchor_scatter( 
+          xvar = input$g_anchor_x, yvar = input$g_anchor_y, 
+          xlab = xlab, ylab = ylab,
+          color = category
+        )
     )
   })
 

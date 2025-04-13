@@ -78,7 +78,26 @@ tab_etfs <- tabItem(
     )),
     tabPanel("Returns from Key Dates", box(
       width = NULL, 
-      div(plotly::plotlyOutput("graph_scatter_etf", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px") 
+      {
+        g_options <- list(
+          Price = list("return_anchor_1", "return_anchor_2", "return_ytd") %>% purrr::set_names(c(anchor_1_msg, anchor_2_msg, "YTD")),
+          AVWAP = list("From Low" = "return_avwap_lo", "From High" = "return_avwap_hi", "From YTD" = "return_avwap_ytd")
+        )
+        
+        fluidRow(
+          column(width = 1),
+          column(width = 5, selectizeInput(
+            "g_anchor_x", "X-Variable", 
+            choices = g_options, selected = "return_anchor_1"
+          )),
+          column(width = 5, selectizeInput(
+            "g_anchor_y", "Y-Variable", 
+            choices = g_options, selected = "return_anchor_2"
+          )),
+          column(width = 1)
+        )
+      },
+      div(plotly::plotlyOutput("graph_scatter_etf", height = "500px", width = "800px") %>% shinycssloaders::withSpinner(type = 7), style = "margin: 0 auto; max-width: 800px")
     )),
     tabPanel("Performance", box(
       width = NULL, 
