@@ -9,10 +9,9 @@ source('www/util.R')
 
 # note this may change 
 anchor_1 <- "2025-02-19"
-anchor_2 <- "2025-03-13"
+anchor_2 <- "2025-04-07"
 anchor_1_msg <- "Feb High"
-anchor_2_msg <- "Mar Low"
-anchor_msg <- anchor_1_msg
+anchor_2_msg <- "Apr Low"
 
 # pull data
 etfs <- get_data("etfs", get_latest_date())
