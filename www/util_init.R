@@ -130,7 +130,7 @@ apply_technical_screen <- function(dat, etfs){
     dplyr::select(sector, return_1m)
   
   # initial filter based 50D/200D uptrend, S/R, RS to spy / sector
-  d1 <- dat %>% dplyr::filter(return_avwap_hi >= 0) %>% 
+  d1 <- dat %>% 
     dplyr::filter(return_50d > 0 & return_200d > 0 & return_50d < return_200d) %>%  # keep above 50d & 200d SMA and 50d SMA > 200d SMA
     dplyr::filter(return_avwap_hi >= 0) %>% # at or above avwap from specific high
     dplyr::filter(return_1m - spy_1m > -0.01) %>% # remove laggards to SPY over last 1m
