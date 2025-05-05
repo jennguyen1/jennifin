@@ -422,8 +422,9 @@ graph_price_avwap_1 <- function(dat, anchor, anchor_label){
       sector = factor(sector, levels = plot_order), 
       label = anchor_label
     ) %>% 
-    ggplot(aes(sector, p, color = category)) +
-    geom_point(shape = 1, size = 3, stroke = 1) + 
+    ggplot(aes(color = category)) +
+    geom_segment(aes(x = sector, xend = sector, y = 0, yend = p)) +
+    geom_point(aes(sector, p), size = 3) + 
     facet_grid(~label) +
     scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 10)) +
     scale_color_manual(values = c("grey50", "limegreen", "tomato", "dodgerblue")) +
