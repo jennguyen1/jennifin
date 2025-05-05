@@ -30,7 +30,8 @@ add_to_price_db <- function(dat, db = use_db){
   db_conn <- DBI::dbConnect(duckdb::duckdb(), db)
   tryCatch({
     DBI::dbWriteTable(db_conn, "prices", dat, append = TRUE)
-    message("Data Uploaded to DB")
+    unique_dates <- length(unique(dat$date))
+    message(paste0("Data Uploaded to DB (", unique_dates, " Days)"))
   }, 
   finally = {
     DBI::dbDisconnect(db_conn)
