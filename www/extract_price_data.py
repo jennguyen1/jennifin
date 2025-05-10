@@ -3,6 +3,7 @@ import datetime
 import duckdb
 import pandas as pd
 import yfinance as yf
+from curl_cffi import requests
 
 # pull data from db already saved
 def get_price_db(year, db = "data/stock_prices.db"):
@@ -33,7 +34,8 @@ def query_ticker_data(tickers, query_date):
       auto_adjust = False,
       threads = True,
       group_by = 'ticker',
-      multi_level_index = False
+      multi_level_index = False, 
+      session = requests.Session(impersonate="chrome")
   )
   d1 = d0.reset_index().melt(id_vars = [('Date', '')])
   d1.columns = ["date", "ticker", "name", "value"]
